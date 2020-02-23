@@ -26,7 +26,7 @@ Instead of using `Task.attempt`, use one of the helper functions to run up to 5
 tasks of different result types (or a list of the same type). It will return a
 tuple with some internal state and a command.
 
-```
+```elm
 ( internalState, fetchCmd ) =
         attempt5
             RequestsUpdated
@@ -40,14 +40,14 @@ tuple with some internal state and a command.
 Store the state and pass along the command. Your model will need to save a
 `State` type matching the number of your tasks.
 
-```
+```elm
 State5 User Options Locations Chat Time.Posix
 ```
 
 The message you passed in to the helper function will need to accept an internal
 `Msg` with a similar type annotation, but including the error type to handle.
 
-```
+```elm
 type Msg
     = RequestsUpdated (Msg5 Http.Error User Options Locations Chat Time.Posix)
     | RequestsFinished User Options
@@ -60,7 +60,7 @@ and finally your update function will only need to handle three cases
 - The error case of the first task to fail
 
 
-```
+```elm
 case msg of
     RequestsUpdated internalMsg ->
         let
