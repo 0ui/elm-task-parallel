@@ -1,10 +1,10 @@
 # elm-task-parallel
 
-Run tasks in parallel when you only need the results if every task finishes
+Run tasks in parallel and handle the results only if every task finishes
 successfully, similar to `Promise.all()` in Javascript.
 
 See the [examples folder](https://github.com/0ui/elm-task-parallel/examples) for
-fully working samples.
+full code examples.
 
 ## Motivation
 
@@ -23,27 +23,35 @@ This library is designed to do that for you.
 ## How to use
 
 Instead of using `Task.attempt`, use one of the helper functions to run up to 5
-tasks. It will return a tuple with some internal state and a command. 
+tasks of different result types (or a list of the same type). It will return a
+tuple with some internal state and a command.
 
 ```
-( fetchState, fetchCmd ) =
-        attempt2 RequestsUpdated Api.fetchUser Api.fetchOptions
+( internalState, fetchCmd ) =
+        attempt5
+            RequestsUpdated
+            Api.fetchUser
+            Api.fetchOptions
+            Api.fetchLocations
+            Api.fetchChat
+            Time.now
 ```
 
 Store the state and pass along the command. Your model will need to save a
-`State` type matching your results with `()` in the unused "slots" of the
-maximum 5 tasks. 
+`State` type matching the number of your tasks.
 
 ```
-State User Options () () ()
+State5 User Options Locations Chat Time.Posix
 ```
 
-The message you passed in to the helper function will need to accept a
-`TaskMsg` with a similar type annotation.
+The message you passed in to the helper function will need to accept an internal
+`Msg` with a similar type annotation, but including the error type to handle.
 
 ```
 type Msg
-    = RequestsUpdated (TaskMsg Http.Error User Options () () ())
+    = RequestsUpdated (Msg5 Http.Error User Options Locations Chat Time.Posix)
+    | RequestsFinished User Options
+    | RequestFailed Http.Error
 ```
 
 and finally your update function will only need to handle three cases
@@ -57,13 +65,12 @@ case msg of
     RequestsUpdated internalMsg ->
         let
             ( nextState, nextCmd ) =
-                Task.Parallel.update
-                    model.internalState internalMsg (Expect2 RequestsFinished) RequestFailed
+                update5 model.internalState internalMsg RequestsFinished RequestFailed
         in
         ( { model | internalState = nextState }, nextCmd )
 
-    RequestsFinished user options ->
-        ( { model | user = user, options = options }, Cmd.none )
+    RequestsFinished user options locations chat time ->
+        ( { model | user = user, options = , locations = locations, chat = chat, currentTime = time }, Cmd.none )
         
     RequestFailed err ->
         ( { model | maybeError = Just err, Cmd.none )

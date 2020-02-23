@@ -1,16 +1,24 @@
 module Task.Parallel exposing
-    ( Expect(..)
-    , ListMsg
+    ( ListMsg
     , ListState
-    , Msg
-    , State
+    , Msg2
+    , Msg3
+    , Msg4
+    , Msg5
+    , State2
+    , State3
+    , State4
+    , State5
     , attempt
     , attempt2
     , attempt3
     , attempt4
     , attempt5
     , attemptList
-    , update
+    , update2
+    , update3
+    , update4
+    , update5
     , updateList
     )
 
@@ -26,61 +34,66 @@ good use case is handling the result of multiple HTTP requests.
 
 ## Update
 
-You will have to pass internal messages and commands along in order to
-eventually get your results.
+You will have to pass internal messages and commands along in your update
+function in order to eventually get your results.
 
-@docs update, Expect, updateList
+@docs update2, update3, update4, update5, updateList
 
 ## Types
-@docs State, Msg, ListState, ListMsg
+@docs State2, State3, State4, State5, Msg2, Msg3, Msg4, Msg5, ListState, ListMsg
 -}
 
 import Task exposing (Task)
 
 {-| Opaque type for storing state of tasks.
 -}
-type State a b c d e
-    = FailedState
-    | State (Maybe a) (Maybe b) (Maybe c) (Maybe d) (Maybe e)
+type State2 a b 
+    = FailedState2
+    | State2 (Maybe a) (Maybe b)
+
+{-|-}
+type State3 a b c
+    = FailedState3
+    | State3 (Maybe a) (Maybe b) (Maybe c)
+
+{-|-}
+type State4 a b c d
+    = FailedState4
+    | State4 (Maybe a) (Maybe b) (Maybe c) (Maybe d)
+{-|-}
+type State5 a b c d e
+    = FailedState5
+    | State5 (Maybe a) (Maybe b) (Maybe c) (Maybe d) (Maybe e)
 
 
 {-| Opaque type for updating state of tasks.
 -}
-type Msg x a b c d e
-    = LoadedA a
-    | LoadedB b
-    | LoadedC c
-    | LoadedD d
-    | LoadedE e
-    | FailedToLoad x
+type Msg2 x a b
+    = LoadedA2 a
+    | LoadedB2 b
+    | FailedToLoad2 x
 
-
-{-| The [`update`](#update) function requires an `Expect` to know how many
-results you're expecting. Wrap your success message in one when you call `update`.
-
-    update : Msg -> Model -> ( Model, Cmd Msg )
-    update msg model =
-        case msg of
-            DownloadUpdated taskMsg ->
-                let
-                    ( nextTaskState, nextCmd ) =
-                        Task.Parallel.update model.taskState taskMsg (Expect4 DownloadCompleted) DownloadFailed
-                in
-                ( { model | taskState = nextTaskState }, nextCmd )
-
-            DownloadCompleted actor film director studio ->
-                ( { model | cinemaRecord = Cinema actor film director studio, Cmd.none )
-
-            DownloadFailed err ->
-                ( { model | loadingError = Just err }, Cmd.none )
--}
-
-type Expect a b c d e msg
-    = Expect1 (a -> msg)
-    | Expect2 (a -> b -> msg)
-    | Expect3 (a -> b -> c -> msg)
-    | Expect4 (a -> b -> c -> d -> msg)
-    | Expect5 (a -> b -> c -> d -> e -> msg)
+{-|-}
+type Msg3 x a b c
+    = LoadedA3 a
+    | LoadedB3 b
+    | LoadedC3 c
+    | FailedToLoad3 x
+{-|-}
+type Msg4 x a b c d
+    = LoadedA4 a
+    | LoadedB4 b
+    | LoadedC4 c
+    | LoadedD4 d
+    | FailedToLoad4 x
+{-|-}
+type Msg5 x a b c d e
+    = LoadedA5 a
+    | LoadedB5 b
+    | LoadedC5 c
+    | LoadedD5 d
+    | LoadedE5 e
+    | FailedToLoad5 x
 
 {-| Attempt a single task. The benefit of this over Task.attempt is that it
 handles routing the result to the provided success and failure messages. You can
@@ -106,73 +119,76 @@ successfully or one fails. The returned `State` will be used in your main
 update function to call [`update`](#update) and pass internal messages.
 
     type Msg
-        = TaskUpdated (Task.Parallel.Msg String Int () () () Http.Error)
-        | TaskFailed Http.Error
-        | TaskCompleted String Int
+        = TaskStateUpdated (Task.Parallel.Msg2 Http.Error String Int)
+        | OneTaskFailed Http.Error
+        | AllTasksCompleted String Int
 
-    doTask : ( Task.Parallel.State String Int () () (), Cmd Msg )
+    doTask : ( Task.Parallel.State2 String Int, Cmd Msg )
     doTask =
-        attempt
-            TaskUpdated
+        attempt2
+            TaskStateUpdated
             fetchString
             fetchInt
 
 -}
-attempt2 : (Msg x a b c d e -> msg) -> Task x a -> Task x b -> ( State a b c d e, Cmd msg )
+attempt2 : (Msg2 x a b -> msg) -> Task x a -> Task x b -> ( State2 a b, Cmd msg )
 attempt2 updateMsg task1 task2 =
-    ( initialState
-    , [ task1 |> routeTo (updateMsg << LoadedA) (updateMsg << FailedToLoad)
-      , task2 |> routeTo (updateMsg << LoadedB) (updateMsg << FailedToLoad)
+    ( State2 Nothing Nothing
+    , [ task1 |> routeTo (updateMsg << LoadedA2) (updateMsg << FailedToLoad2)
+      , task2 |> routeTo (updateMsg << LoadedB2) (updateMsg << FailedToLoad2)
       ]
         |> Cmd.batch
     )
 
 {-|-}
 
-attempt3 : (Msg x a b c d e -> msg) -> Task x a -> Task x b -> Task x c -> ( State a b c d e, Cmd msg )
+attempt3 : (Msg3 x a b c -> msg) -> Task x a -> Task x b -> Task x c -> ( State3 a b c, Cmd msg )
 attempt3 updateMsg task1 task2 task3 =
-    ( initialState
-    , [ task1 |> routeTo (updateMsg << LoadedA) (updateMsg << FailedToLoad)
-      , task2 |> routeTo (updateMsg << LoadedB) (updateMsg << FailedToLoad)
-      , task3 |> routeTo (updateMsg << LoadedC) (updateMsg << FailedToLoad)
+    ( State3 Nothing Nothing Nothing
+    , [ task1 |> routeTo (updateMsg << LoadedA3) (updateMsg << FailedToLoad3)
+      , task2 |> routeTo (updateMsg << LoadedB3) (updateMsg << FailedToLoad3)
+      , task3 |> routeTo (updateMsg << LoadedC3) (updateMsg << FailedToLoad3)
       ]
         |> Cmd.batch
     )
 
 {-|-}
-attempt4 : (Msg x a b c d e -> msg) -> Task x a -> Task x b -> Task x c -> Task x d -> ( State a b c d e, Cmd msg )
+attempt4 : (Msg4 x a b c d -> msg) -> Task x a -> Task x b -> Task x c -> Task x d -> ( State4 a b c d, Cmd msg )
 attempt4 updateMsg task1 task2 task3 task4 =
-    ( initialState
-    , [ task1 |> routeTo (updateMsg << LoadedA) (updateMsg << FailedToLoad)
-      , task2 |> routeTo (updateMsg << LoadedB) (updateMsg << FailedToLoad)
-      , task3 |> routeTo (updateMsg << LoadedC) (updateMsg << FailedToLoad)
-      , task4 |> routeTo (updateMsg << LoadedD) (updateMsg << FailedToLoad)
+    ( State4 Nothing Nothing Nothing Nothing
+    , [ task1 |> routeTo (updateMsg << LoadedA4) (updateMsg << FailedToLoad4)
+      , task2 |> routeTo (updateMsg << LoadedB4) (updateMsg << FailedToLoad4)
+      , task3 |> routeTo (updateMsg << LoadedC4) (updateMsg << FailedToLoad4)
+      , task4 |> routeTo (updateMsg << LoadedD4) (updateMsg << FailedToLoad4)
       ]
-        |> Cmd.batch
+        |> Cmd.batch    
     )
 
 {-|-}
-attempt5 : (Msg x a b c d e -> msg) -> Task x a -> Task x b -> Task x c -> Task x d -> Task x e -> ( State a b c d e, Cmd msg )
+attempt5 : (Msg5 x a b c d e -> msg) -> Task x a -> Task x b -> Task x c -> Task x d -> Task x e -> ( State5 a b c d e, Cmd msg )
 attempt5 updateMsg task1 task2 task3 task4 task5 =
-    ( initialState
-    , [ task1 |> routeTo (updateMsg << LoadedA) (updateMsg << FailedToLoad)
-      , task2 |> routeTo (updateMsg << LoadedB) (updateMsg << FailedToLoad)
-      , task3 |> routeTo (updateMsg << LoadedC) (updateMsg << FailedToLoad)
-      , task4 |> routeTo (updateMsg << LoadedD) (updateMsg << FailedToLoad)
-      , task5 |> routeTo (updateMsg << LoadedE) (updateMsg << FailedToLoad)
+    ( State5 Nothing Nothing Nothing Nothing Nothing
+    , [ task1 |> routeTo (updateMsg << LoadedA5) (updateMsg << FailedToLoad5)
+      , task2 |> routeTo (updateMsg << LoadedB5) (updateMsg << FailedToLoad5)
+      , task3 |> routeTo (updateMsg << LoadedC5) (updateMsg << FailedToLoad5)
+      , task4 |> routeTo (updateMsg << LoadedD5) (updateMsg << FailedToLoad5)
+      , task5 |> routeTo (updateMsg << LoadedE5) (updateMsg << FailedToLoad5)
       ]
         |> Cmd.batch
     )
 
 
-{-| Call `update` inside of your main update function to check if the 
-tasks have failed or finished. Maintain a copy of the returned state to pass in
-on each subsequent `update`. This step is required with `attempt[n]` functions.
+{-| Handle updates for two tasks by calling `update2` inside of your main update
+function to keep this library's internal state updated. If they have either all 
+finished successfully or one has failed, the corresponding message you provided
+will be sent to your main `update` function. Maintain a copy of the returned 
+state to pass in on each subsequent `update`. This step is required with 
+`attempt[n]` functions.
 
     type Msg
-        = DownloadUpdated (Task.Parallel.Msg Actor Film Director Studio Distributor Http.Error)
+        = DownloadUpdated (Task.Parallel.Msg2 Http.Error Actor Film)
         | DownloadFailed Http.Error
-        | DownloadCompleted Actor Film Director Studio Distributor
+        | DownloadCompleted Actor Film
 
     update : Msg -> Model -> ( Model, Cmd Msg )
     update msg model =
@@ -180,44 +196,107 @@ on each subsequent `update`. This step is required with `attempt[n]` functions.
             DownloadUpdated taskMsg ->
                 let
                     ( nextTaskState, nextCmd ) =
-                        Task.Parallel.update model.taskState taskMsg (Expect5 DownloadCompleted) DownloadFailed
+                        Task.Parallel.update2 model.taskState taskMsg DownloadCompleted DownloadFailed
                 in
                 ( { model | taskState = nextTaskState }, nextCmd )
 
-            DownloadCompleted actor film director studio distributor ->
-                ( { model | cinemaRecord = Cinema actor film director studio distributor, Cmd.none )
+            DownloadCompleted actor film ->
+                ( { model | actor = actor, film = film, Cmd.none )
 
             DownloadFailed err ->
                 ( { model | loadingError = Just err }, Cmd.none )
 
 -}
-update : State a b c d e -> Msg x a b c d e -> Expect a b c d e msg -> (x -> msg) -> ( State a b c d e, Cmd msg )
-update prevData msg successMsg failureMsg =
+
+update2 : State2 a b -> Msg2 x a b -> (a -> b -> msg) -> (x -> msg) -> ( State2 a b, Cmd msg )
+update2 prevData msg successMsg failureMsg =
     case prevData of
-        FailedState ->
-            {- Quit handling further messages once first failure has occurred. -}
+        FailedState2 ->
             ( prevData, Cmd.none )
 
-        State a b c d e ->
+        State2 a b ->
             case msg of
-                LoadedA data ->
-                    getNextCmd successMsg (Just data) b c d e
+                LoadedA2 data ->
+                    nextCmd2 (Just data) b successMsg
 
-                LoadedB data ->
-                    getNextCmd successMsg a (Just data) c d e
+                LoadedB2 data ->
+                    nextCmd2 a (Just data) successMsg
 
-                LoadedC data ->
-                    getNextCmd successMsg a b (Just data) d e
 
-                LoadedD data ->
-                    getNextCmd successMsg a b c (Just data) e
+                FailedToLoad2 err ->
+                    ( FailedState2, failureMsg err |> toCmd )
 
-                LoadedE data ->
-                    getNextCmd successMsg a b c d (Just data)
+{-|-}
+update3 : State3 a b c -> Msg3 x a b c -> (a -> b -> c -> msg) -> (x -> msg) -> ( State3 a b c, Cmd msg )
+update3 prevData msg successMsg failureMsg =
+    case prevData of
+        FailedState3 ->
+            ( prevData, Cmd.none )
 
-                FailedToLoad err ->
-                    ( FailedState, failureMsg err |> (Task.succeed >> Task.perform identity) )
+        State3 a b c ->
+            case msg of
+                LoadedA3 data ->
+                    nextCmd3 (Just data) b c successMsg
 
+                LoadedB3 data ->
+                    nextCmd3 a (Just data) c successMsg
+                
+                LoadedC3 data ->
+                    nextCmd3 a b (Just data) successMsg
+
+                FailedToLoad3 err ->
+                    ( FailedState3, failureMsg err |> toCmd )
+{-|-}
+update4 : State4 a b c d -> Msg4 x a b c d -> (a -> b -> c -> d -> msg) -> (x -> msg) -> ( State4 a b c d, Cmd msg )
+update4 prevData msg successMsg failureMsg =
+    case prevData of
+        FailedState4 ->
+            ( prevData, Cmd.none )
+
+        State4 a b c d ->
+            case msg of
+                LoadedA4 data ->
+                    nextCmd4 (Just data) b c d successMsg
+
+                LoadedB4 data ->
+                    nextCmd4 a (Just data) c d successMsg
+                
+                LoadedC4 data ->
+                    nextCmd4 a b (Just data) d successMsg
+
+                LoadedD4 data ->
+                    nextCmd4 a b c (Just data) successMsg
+
+                FailedToLoad4 err ->
+                    ( FailedState4, failureMsg err |> toCmd )
+
+{-|-}
+update5 : State5 a b c d e -> Msg5 x a b c d e -> (a -> b -> c -> d -> e -> msg) -> (x -> msg) -> ( State5 a b c d e, Cmd msg )
+update5 prevData msg successMsg failureMsg =
+    case prevData of
+        FailedState5 ->
+            ( prevData, Cmd.none )
+
+        State5 a b c d e ->
+            case msg of
+                LoadedA5 data ->
+                    nextCmd5 (Just data) b c d e successMsg
+
+                LoadedB5 data ->
+                    nextCmd5 a (Just data) c d e successMsg
+                
+                LoadedC5 data ->
+                    nextCmd5 a b (Just data) d e successMsg
+
+                LoadedD5 data ->
+                    nextCmd5 a b c (Just data) e successMsg
+
+                LoadedE5 data ->
+                    nextCmd5 a b c d (Just data) successMsg
+
+
+                FailedToLoad5 err ->
+                    ( FailedState5, failureMsg err |> toCmd )
 
 
 {-| Opaque type for storing state of task lists.
@@ -237,7 +316,7 @@ type ListMsg x a
 or when one fails. Similar to a `Task.sequence` except in parallel.
 
     type Msg
-        = DownloadUpdated (ListState String)
+        = DownloadUpdated (ListMsg Http.Error String)
         | DownloadFailed Http.Error
         | DownloadCompleted (List String)
 
@@ -295,7 +374,7 @@ updateList prevData listMsg successMsg failureMsg =
         ListState items ->
             case listMsg of
                 ItemFailed err ->
-                    ( ListStateFailed, failureMsg err |> (Task.succeed >> Task.perform identity) )
+                    ( ListStateFailed, failureMsg err |> toCmd )
 
                 ItemLoaded index newItem ->
                     let
@@ -320,12 +399,6 @@ updateList prevData listMsg successMsg failureMsg =
 
 -- Internal
 
-
-initialState : State a b c d e
-initialState =
-    State Nothing Nothing Nothing Nothing Nothing
-
-
 routeTo : (data -> msg) -> (x -> msg) -> Task x data -> Cmd msg
 routeTo successMsg failureMsg =
     Task.andThen (Task.succeed << Result.Ok)
@@ -340,25 +413,34 @@ routeTo successMsg failureMsg =
                         failureMsg err
             )
 
+toCmd : msg -> Cmd msg
+toCmd =
+    Task.succeed >> Task.perform identity
 
-getNextCmd : Expect a b c d e msg -> Maybe a -> Maybe b -> Maybe c -> Maybe d -> Maybe e -> ( State a b c d e, Cmd msg )
-getNextCmd successMsg a b c d e =
-    (case successMsg of
-        Expect1 func ->
-            Maybe.map func a
-
-        Expect2 func ->
-            Maybe.map2 func a b
-
-        Expect3 func ->
-            Maybe.map3 func a b c
-
-        Expect4 func ->
-            Maybe.map4 func a b c d
-
-        Expect5 func ->
-            Maybe.map5 func a b c d e
-    )
-        |> Maybe.map (Task.succeed >> Task.perform identity)
+nextCmd2 : Maybe a -> Maybe b -> (a -> b -> msg) -> ( State2 a b, Cmd msg )
+nextCmd2 a b successMsg =
+    Maybe.map2 successMsg a b
+        |> Maybe.map toCmd
         |> Maybe.withDefault Cmd.none
-        |> (\cmd -> ( State a b c d e, cmd ))
+        |> \cmd -> ( State2 a b, cmd )
+
+nextCmd3 : Maybe a -> Maybe b -> Maybe c -> (a -> b -> c -> msg) -> ( State3 a b c, Cmd msg )
+nextCmd3 a b c successMsg =
+    Maybe.map3 successMsg a b c
+        |> Maybe.map toCmd
+        |> Maybe.withDefault Cmd.none
+        |> \cmd -> ( State3 a b c, cmd )
+
+nextCmd4 : Maybe a -> Maybe b -> Maybe c -> Maybe d -> (a -> b -> c -> d -> msg) -> ( State4 a b c d, Cmd msg )
+nextCmd4 a b c d successMsg =
+    Maybe.map4 successMsg a b c d
+        |> Maybe.map toCmd
+        |> Maybe.withDefault Cmd.none
+        |> \cmd -> ( State4 a b c d, cmd )
+
+nextCmd5 : Maybe a -> Maybe b -> Maybe c -> Maybe d -> Maybe e -> (a -> b -> c -> d -> e -> msg) -> ( State5 a b c d e, Cmd msg )
+nextCmd5 a b c d e successMsg =
+    Maybe.map5 successMsg a b c d e
+        |> Maybe.map toCmd
+        |> Maybe.withDefault Cmd.none
+        |> \cmd -> ( State5 a b c d e, cmd )

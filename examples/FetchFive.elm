@@ -10,7 +10,7 @@ import Browser
 import Html exposing (Html, div, text, img, h1, h2, p, ul, li)
 import Html.Attributes exposing (src)
 import Http
-import Task.Parallel
+import Task.Parallel exposing (State5, Msg5, attempt5, update5)
 import Time
 
 main =
@@ -22,7 +22,7 @@ main =
     }
 
 type Model
-  = Loading (Task.Parallel.State Post (List Comment) Time.Posix Photo Todo)
+  = Loading (State5 Post (List Comment) Time.Posix Photo Todo)
   | FailedToLoad String
   | PageReady Post (List Comment) Time.Posix Photo Todo
 
@@ -31,13 +31,13 @@ init : () -> (Model, Cmd Msg)
 init _ =
     let
         ( loadingState, fetchCmd ) =
-            Task.Parallel.attempt5 DownloadUpdated Api.fetchPost Api.fetchComments Time.now Api.fetchPhoto Api.fetchTodo
+            attempt5 DownloadUpdated Api.fetchPost Api.fetchComments Time.now Api.fetchPhoto Api.fetchTodo
     in
     ( Loading loadingState, fetchCmd )
 
 
 type Msg
-    = DownloadUpdated (Task.Parallel.Msg Http.Error Post (List Comment) Time.Posix Photo Todo)
+    = DownloadUpdated (Msg5 Http.Error Post (List Comment) Time.Posix Photo Todo)
     | DownloadFailed Http.Error
     | DownloadFinished Post (List Comment) Time.Posix Photo Todo
 
@@ -50,7 +50,7 @@ update msg model =
                 DownloadUpdated downloadMsg ->
                     let
                         ( nextState, nextCmd ) =
-                            Task.Parallel.update downloadState downloadMsg (Task.Parallel.Expect5 DownloadFinished) DownloadFailed
+                            update5 downloadState downloadMsg DownloadFinished DownloadFailed
                     in
                     ( Loading nextState, nextCmd )
                 DownloadFailed err ->

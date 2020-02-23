@@ -1,8 +1,6 @@
 module FetchTwo exposing (main)
 
 {- This example makes two HTTP requests before it can render the page content.
-Notice the type annotations have () in the empty "slots" because only two of the
-possible five tasks are being used. You can ignore these and 
 -}
 
 import Api exposing (Post, Comment)
@@ -20,7 +18,7 @@ main =
     }
 
 type Model
-  = Loading (Task.Parallel.State Post (List Comment) () () ())
+  = Loading (Task.Parallel.State2 Post (List Comment))
   | FailedToLoad String
   | PageReady Post (List Comment)
 
@@ -35,7 +33,7 @@ init _ =
 
 
 type Msg
-    = DownloadUpdated (Task.Parallel.Msg Http.Error Post (List Comment) () () ())
+    = DownloadUpdated (Task.Parallel.Msg2 Http.Error Post (List Comment))
     | DownloadFailed Http.Error
     | DownloadFinished Post (List Comment)
 
@@ -48,7 +46,7 @@ update msg model =
                 DownloadUpdated downloadMsg ->
                     let
                         ( nextState, nextCmd ) =
-                            Task.Parallel.update downloadState downloadMsg (Task.Parallel.Expect2 DownloadFinished) DownloadFailed
+                            Task.Parallel.update2 downloadState downloadMsg DownloadFinished DownloadFailed
                     in
                     ( Loading nextState, nextCmd )
                 DownloadFailed err ->

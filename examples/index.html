@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>FetchList</title>
+  <title>FetchTwo</title>
   <style>body { padding: 0; margin: 0; }</style>
 </head>
 
@@ -10725,22 +10725,25 @@ var $elm$core$Basics$never = function (_v0) {
 	}
 };
 var $elm$browser$Browser$element = _Browser_element;
-var $author$project$FetchList$DownloadUpdated = function (a) {
+var $author$project$FetchTwo$DownloadUpdated = function (a) {
 	return {$: 'DownloadUpdated', a: a};
 };
-var $author$project$FetchList$Loading = function (a) {
+var $author$project$FetchTwo$Loading = function (a) {
 	return {$: 'Loading', a: a};
 };
-var $author$project$Task$Parallel$ItemFailed = function (a) {
-	return {$: 'ItemFailed', a: a};
+var $author$project$Task$Parallel$FailedToLoad2 = function (a) {
+	return {$: 'FailedToLoad2', a: a};
 };
-var $author$project$Task$Parallel$ItemLoaded = F2(
+var $author$project$Task$Parallel$LoadedA2 = function (a) {
+	return {$: 'LoadedA2', a: a};
+};
+var $author$project$Task$Parallel$LoadedB2 = function (a) {
+	return {$: 'LoadedB2', a: a};
+};
+var $author$project$Task$Parallel$State2 = F2(
 	function (a, b) {
-		return {$: 'ItemLoaded', a: a, b: b};
+		return {$: 'State2', a: a, b: b};
 	});
-var $author$project$Task$Parallel$ListState = function (a) {
-	return {$: 'ListState', a: a};
-};
 var $elm$core$Task$onError = _Scheduler_onError;
 var $author$project$Task$Parallel$routeTo = F2(
 	function (successMsg, failureMsg) {
@@ -10763,30 +10766,37 @@ var $author$project$Task$Parallel$routeTo = F2(
 						}
 					})));
 	});
-var $author$project$Task$Parallel$attemptList = F2(
-	function (updateMsg, tasks) {
+var $author$project$Task$Parallel$attempt2 = F3(
+	function (updateMsg, task1, task2) {
 		return _Utils_Tuple2(
-			$author$project$Task$Parallel$ListState(
-				A2(
-					$elm$core$List$map,
-					$elm$core$Basics$always($elm$core$Maybe$Nothing),
-					tasks)),
+			A2($author$project$Task$Parallel$State2, $elm$core$Maybe$Nothing, $elm$core$Maybe$Nothing),
 			$elm$core$Platform$Cmd$batch(
-				A2(
-					$elm$core$List$indexedMap,
-					F2(
-						function (index, task) {
-							return A3(
-								$author$project$Task$Parallel$routeTo,
-								A2(
-									$elm$core$Basics$composeL,
-									updateMsg,
-									$author$project$Task$Parallel$ItemLoaded(index)),
-								A2($elm$core$Basics$composeL, updateMsg, $author$project$Task$Parallel$ItemFailed),
-								task);
-						}),
-					tasks)));
+				_List_fromArray(
+					[
+						A3(
+						$author$project$Task$Parallel$routeTo,
+						A2($elm$core$Basics$composeL, updateMsg, $author$project$Task$Parallel$LoadedA2),
+						A2($elm$core$Basics$composeL, updateMsg, $author$project$Task$Parallel$FailedToLoad2),
+						task1),
+						A3(
+						$author$project$Task$Parallel$routeTo,
+						A2($elm$core$Basics$composeL, updateMsg, $author$project$Task$Parallel$LoadedB2),
+						A2($elm$core$Basics$composeL, updateMsg, $author$project$Task$Parallel$FailedToLoad2),
+						task2)
+					])));
 	});
+var $author$project$Api$Comment = F5(
+	function (postId, id, name, email, body) {
+		return {body: body, email: email, id: id, name: name, postId: postId};
+	});
+var $author$project$Api$commentDecoder = A6(
+	$elm$json$Json$Decode$map5,
+	$author$project$Api$Comment,
+	A2($elm$json$Json$Decode$field, 'postId', $elm$json$Json$Decode$int),
+	A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int),
+	A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'email', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'body', $elm$json$Json$Decode$string));
 var $elm$http$Http$BadStatus_ = F2(
 	function (a, b) {
 		return {$: 'BadStatus_', a: a, b: b};
@@ -10884,6 +10894,10 @@ var $author$project$Api$getTask = F2(
 				url: path
 			});
 	});
+var $author$project$Api$fetchComments = A2(
+	$author$project$Api$getTask,
+	'https://jsonplaceholder.typicode.com/posts/1/comments',
+	$elm$json$Json$Decode$list($author$project$Api$commentDecoder));
 var $author$project$Api$Post = F4(
 	function (userId, id, title, body) {
 		return {body: body, id: id, title: title, userId: userId};
@@ -10896,45 +10910,31 @@ var $author$project$Api$postDecoder = A5(
 	A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int),
 	A2($elm$json$Json$Decode$field, 'title', $elm$json$Json$Decode$string),
 	A2($elm$json$Json$Decode$field, 'body', $elm$json$Json$Decode$string));
-var $author$project$Api$fetchPostById = function (id) {
-	return A2(
-		$author$project$Api$getTask,
-		'https://jsonplaceholder.typicode.com/posts/' + $elm$core$String$fromInt(id),
-		$author$project$Api$postDecoder);
-};
-var $author$project$FetchList$init = function (_v0) {
-	var _v1 = A2(
-		$author$project$Task$Parallel$attemptList,
-		$author$project$FetchList$DownloadUpdated,
-		_List_fromArray(
-			[
-				$author$project$Api$fetchPostById(1),
-				$author$project$Api$fetchPostById(2),
-				$author$project$Api$fetchPostById(42),
-				$author$project$Api$fetchPostById(4),
-				$author$project$Api$fetchPostById(5),
-				$author$project$Api$fetchPostById(12)
-			]));
+var $author$project$Api$fetchPost = A2($author$project$Api$getTask, 'https://jsonplaceholder.typicode.com/posts/1', $author$project$Api$postDecoder);
+var $author$project$FetchTwo$init = function (_v0) {
+	var _v1 = A3($author$project$Task$Parallel$attempt2, $author$project$FetchTwo$DownloadUpdated, $author$project$Api$fetchPost, $author$project$Api$fetchComments);
 	var loadingState = _v1.a;
 	var fetchCmd = _v1.b;
 	return _Utils_Tuple2(
-		$author$project$FetchList$Loading(loadingState),
+		$author$project$FetchTwo$Loading(loadingState),
 		fetchCmd);
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
-var $author$project$FetchList$DownloadFailed = function (a) {
+var $author$project$FetchTwo$DownloadFailed = function (a) {
 	return {$: 'DownloadFailed', a: a};
 };
-var $author$project$FetchList$DownloadFinished = function (a) {
-	return {$: 'DownloadFinished', a: a};
-};
-var $author$project$FetchList$FailedToLoad = function (a) {
+var $author$project$FetchTwo$DownloadFinished = F2(
+	function (a, b) {
+		return {$: 'DownloadFinished', a: a, b: b};
+	});
+var $author$project$FetchTwo$FailedToLoad = function (a) {
 	return {$: 'FailedToLoad', a: a};
 };
-var $author$project$FetchList$PageReady = function (a) {
-	return {$: 'PageReady', a: a};
-};
+var $author$project$FetchTwo$PageReady = F2(
+	function (a, b) {
+		return {$: 'PageReady', a: a, b: b};
+	});
 var $author$project$Api$httpErrorString = function (error) {
 	switch (error.$) {
 		case 'BadUrl':
@@ -10952,92 +10952,106 @@ var $author$project$Api$httpErrorString = function (error) {
 			return message;
 	}
 };
-var $author$project$Task$Parallel$ListStateFailed = {$: 'ListStateFailed'};
-var $elm$core$List$any = F2(
-	function (isOkay, list) {
-		any:
-		while (true) {
-			if (!list.b) {
-				return false;
+var $author$project$Task$Parallel$FailedState2 = {$: 'FailedState2'};
+var $elm$core$Maybe$map = F2(
+	function (f, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return $elm$core$Maybe$Just(
+				f(value));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $elm$core$Maybe$map2 = F3(
+	function (func, ma, mb) {
+		if (ma.$ === 'Nothing') {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var a = ma.a;
+			if (mb.$ === 'Nothing') {
+				return $elm$core$Maybe$Nothing;
 			} else {
-				var x = list.a;
-				var xs = list.b;
-				if (isOkay(x)) {
-					return true;
-				} else {
-					var $temp$isOkay = isOkay,
-						$temp$list = xs;
-					isOkay = $temp$isOkay;
-					list = $temp$list;
-					continue any;
-				}
+				var b = mb.a;
+				return $elm$core$Maybe$Just(
+					A2(func, a, b));
 			}
 		}
 	});
-var $author$project$Task$Parallel$updateList = F4(
-	function (prevData, listMsg, successMsg, failureMsg) {
-		if (prevData.$ === 'ListStateFailed') {
+var $author$project$Task$Parallel$toCmd = A2(
+	$elm$core$Basics$composeR,
+	$elm$core$Task$succeed,
+	$elm$core$Task$perform($elm$core$Basics$identity));
+var $author$project$Task$Parallel$nextCmd2 = F3(
+	function (a, b, successMsg) {
+		return function (cmd) {
+			return _Utils_Tuple2(
+				A2($author$project$Task$Parallel$State2, a, b),
+				cmd);
+		}(
+			A2(
+				$elm$core$Maybe$withDefault,
+				$elm$core$Platform$Cmd$none,
+				A2(
+					$elm$core$Maybe$map,
+					$author$project$Task$Parallel$toCmd,
+					A3($elm$core$Maybe$map2, successMsg, a, b))));
+	});
+var $author$project$Task$Parallel$update2 = F4(
+	function (prevData, msg, successMsg, failureMsg) {
+		if (prevData.$ === 'FailedState2') {
 			return _Utils_Tuple2(prevData, $elm$core$Platform$Cmd$none);
 		} else {
-			var items = prevData.a;
-			if (listMsg.$ === 'ItemFailed') {
-				var err = listMsg.a;
-				return _Utils_Tuple2(
-					$author$project$Task$Parallel$ListStateFailed,
-					A3(
-						$elm$core$Basics$composeR,
-						$elm$core$Task$succeed,
-						$elm$core$Task$perform($elm$core$Basics$identity),
-						failureMsg(err)));
-			} else {
-				var index = listMsg.a;
-				var newItem = listMsg.b;
-				var updatedItems = A2(
-					$elm$core$List$indexedMap,
-					F2(
-						function (i, maybeItem) {
-							return _Utils_eq(i, index) ? $elm$core$Maybe$Just(newItem) : maybeItem;
-						}),
-					items);
-				return A2(
-					$elm$core$List$any,
-					$elm$core$Basics$eq($elm$core$Maybe$Nothing),
-					updatedItems) ? _Utils_Tuple2(
-					$author$project$Task$Parallel$ListState(updatedItems),
-					$elm$core$Platform$Cmd$none) : _Utils_Tuple2(
-					$author$project$Task$Parallel$ListState(updatedItems),
-					A3(
-						$elm$core$Basics$composeR,
-						$elm$core$Task$succeed,
-						$elm$core$Task$perform($elm$core$Basics$identity),
-						successMsg(
-							A2($elm$core$List$filterMap, $elm$core$Basics$identity, updatedItems))));
+			var a = prevData.a;
+			var b = prevData.b;
+			switch (msg.$) {
+				case 'LoadedA2':
+					var data = msg.a;
+					return A3(
+						$author$project$Task$Parallel$nextCmd2,
+						$elm$core$Maybe$Just(data),
+						b,
+						successMsg);
+				case 'LoadedB2':
+					var data = msg.a;
+					return A3(
+						$author$project$Task$Parallel$nextCmd2,
+						a,
+						$elm$core$Maybe$Just(data),
+						successMsg);
+				default:
+					var err = msg.a;
+					return _Utils_Tuple2(
+						$author$project$Task$Parallel$FailedState2,
+						$author$project$Task$Parallel$toCmd(
+							failureMsg(err)));
 			}
 		}
 	});
-var $author$project$FetchList$update = F2(
+var $author$project$FetchTwo$update = F2(
 	function (msg, model) {
 		if (model.$ === 'Loading') {
 			var downloadState = model.a;
 			switch (msg.$) {
 				case 'DownloadUpdated':
 					var downloadMsg = msg.a;
-					var _v2 = A4($author$project$Task$Parallel$updateList, downloadState, downloadMsg, $author$project$FetchList$DownloadFinished, $author$project$FetchList$DownloadFailed);
+					var _v2 = A4($author$project$Task$Parallel$update2, downloadState, downloadMsg, $author$project$FetchTwo$DownloadFinished, $author$project$FetchTwo$DownloadFailed);
 					var nextState = _v2.a;
 					var nextCmd = _v2.b;
 					return _Utils_Tuple2(
-						$author$project$FetchList$Loading(nextState),
+						$author$project$FetchTwo$Loading(nextState),
 						nextCmd);
 				case 'DownloadFailed':
 					var err = msg.a;
 					return _Utils_Tuple2(
-						$author$project$FetchList$FailedToLoad(
+						$author$project$FetchTwo$FailedToLoad(
 							$author$project$Api$httpErrorString(err)),
 						$elm$core$Platform$Cmd$none);
 				default:
-					var posts = msg.a;
+					var post = msg.a;
+					var comments = msg.b;
 					return _Utils_Tuple2(
-						$author$project$FetchList$PageReady(posts),
+						A2($author$project$FetchTwo$PageReady, post, comments),
 						$elm$core$Platform$Cmd$none);
 			}
 		} else {
@@ -11045,7 +11059,7 @@ var $author$project$FetchList$update = F2(
 		}
 	});
 var $elm$html$Html$h1 = _VirtualDom_node('h1');
-var $author$project$FetchList$view = function (model) {
+var $author$project$FetchTwo$view = function (model) {
 	switch (model.$) {
 		case 'Loading':
 			return $elm$html$Html$text('Loading data...');
@@ -11053,7 +11067,8 @@ var $author$project$FetchList$view = function (model) {
 			var err = model.a;
 			return $elm$html$Html$text('Failed to load: ' + err);
 		default:
-			var posts = model.a;
+			var post = model.a;
+			var comments = model.b;
 			return A2(
 				$elm$html$Html$div,
 				_List_Nil,
@@ -11064,14 +11079,21 @@ var $author$project$FetchList$view = function (model) {
 						_List_Nil,
 						_List_fromArray(
 							[
-								$elm$html$Html$text('Posts')
+								$elm$html$Html$text(post.title)
+							])),
+						A2(
+						$elm$html$Html$p,
+						_List_Nil,
+						_List_fromArray(
+							[
+								$elm$html$Html$text(post.body)
 							])),
 						A2(
 						$elm$html$Html$ul,
 						_List_Nil,
 						A2(
 							$elm$core$List$map,
-							function (post) {
+							function (comment) {
 								return A2(
 									$elm$html$Html$li,
 									_List_Nil,
@@ -11082,40 +11104,32 @@ var $author$project$FetchList$view = function (model) {
 											_List_Nil,
 											_List_fromArray(
 												[
-													$elm$html$Html$text(post.title)
+													$elm$html$Html$text(comment.name)
 												])),
 											A2(
 											$elm$html$Html$p,
 											_List_Nil,
 											_List_fromArray(
 												[
-													$elm$html$Html$text(post.body)
-												])),
-											A2(
-											$elm$html$Html$p,
-											_List_Nil,
-											_List_fromArray(
-												[
-													$elm$html$Html$text(
-													$elm$core$String$fromInt(post.id))
+													$elm$html$Html$text(comment.body)
 												]))
 										]));
 							},
-							posts))
+							comments))
 					]));
 	}
 };
-var $author$project$FetchList$main = $elm$browser$Browser$element(
+var $author$project$FetchTwo$main = $elm$browser$Browser$element(
 	{
-		init: $author$project$FetchList$init,
+		init: $author$project$FetchTwo$init,
 		subscriptions: $elm$core$Basics$always($elm$core$Platform$Sub$none),
-		update: $author$project$FetchList$update,
-		view: $author$project$FetchList$view
+		update: $author$project$FetchTwo$update,
+		view: $author$project$FetchTwo$view
 	});
-_Platform_export({'FetchList':{'init':$author$project$FetchList$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"FetchList.Msg","aliases":{"Api.Post":{"args":[],"type":"{ userId : Basics.Int, id : Basics.Int, title : String.String, body : String.String }"}},"unions":{"FetchList.Msg":{"args":[],"tags":{"DownloadUpdated":["Task.Parallel.ListMsg Http.Error Api.Post"],"DownloadFailed":["Http.Error"],"DownloadFinished":["List.List Api.Post"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"List.List":{"args":["a"],"tags":{}},"Task.Parallel.ListMsg":{"args":["x","a"],"tags":{"ItemLoaded":["Basics.Int","a"],"ItemFailed":["x"]}},"String.String":{"args":[],"tags":{"String":[]}}}}})}});}(this));
+_Platform_export({'FetchTwo':{'init':$author$project$FetchTwo$main(
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"FetchTwo.Msg","aliases":{"Api.Comment":{"args":[],"type":"{ postId : Basics.Int, id : Basics.Int, name : String.String, email : String.String, body : String.String }"},"Api.Post":{"args":[],"type":"{ userId : Basics.Int, id : Basics.Int, title : String.String, body : String.String }"}},"unions":{"FetchTwo.Msg":{"args":[],"tags":{"DownloadUpdated":["Task.Parallel.Msg2 Http.Error Api.Post (List.List Api.Comment)"],"DownloadFailed":["Http.Error"],"DownloadFinished":["Api.Post","List.List Api.Comment"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"List.List":{"args":["a"],"tags":{}},"Task.Parallel.Msg2":{"args":["x","a","b"],"tags":{"LoadedA2":["a"],"LoadedB2":["b"],"FailedToLoad2":["x"]}},"String.String":{"args":[],"tags":{"String":[]}}}}})}});}(this));
 
-  var app = Elm.FetchList.init({ node: document.getElementById("elm") });
+  var app = Elm.FetchTwo.init({ node: document.getElementById("elm") });
 }
 catch (e)
 {

@@ -1,7 +1,6 @@
 module FetchList exposing (main)
 
-{- This example fetches a list of HTTP tasks. There happens to be six in the
-   list but that's arbitrary and it could be a list of any length. 
+{- This example fetches a list of HTTP tasks. 
 -}
 
 import Api exposing (Post, Comment)
