@@ -37,7 +37,7 @@ tuple with some internal state and a command.
             Time.now
 ```
 
-Store the state and pass along the command. Your model will need to save a
+Store the state and pass along the command. Your model will need to store a
 `State` type matching the number of your tasks.
 
 ```elm
@@ -81,4 +81,8 @@ case msg of
 
 - If the tasks have different result types, you're limited to 5 tasks (mirroring
 `Maybe.map`). For HTTP requests, this is a limit I haven't run into yet. For
-lists of tasks, there is no limit 
+lists of tasks, there is no limit.
+- Updating the internal state of this library adds one case to your update
+function, however in the case of 5 tasks you could already have 10 cases
+just to update those + a completion check. This library limits those to just
+three.
