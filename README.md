@@ -50,7 +50,7 @@ The message you passed in to the helper function will need to accept an internal
 ```elm
 type Msg
     = RequestsUpdated (Msg5 Http.Error User Options Locations Chat Time.Posix)
-    | RequestsFinished User Options
+    | RequestsFinished User Options Locations Chat Time.Posix
     | RequestFailed Http.Error
 ```
 
