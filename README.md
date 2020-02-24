@@ -3,7 +3,7 @@
 Run tasks in parallel and handle the results only if every task finishes
 successfully, similar to `Promise.all()` in Javascript.
 
-See the [examples folder](examples) for
+See the [examples folder](https://github.com/0ui/elm-task-parallel/tree/master/examples) for
 full code examples.
 
 ## Motivation
