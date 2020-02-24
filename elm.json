@@ -1,7 +1,7 @@
 {
     "type": "package",
     "name": "0ui/elm-task-parallel",
-    "summary": "A library for running tasks in parallel",
+    "summary": "Run tasks in parallel and handle all the results in one message.",
     "license": "BSD-3-Clause",
     "version": "1.0.1",
     "exposed-modules": [
