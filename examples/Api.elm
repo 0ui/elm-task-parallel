@@ -11,6 +11,10 @@ module Api exposing
     , Todo
     )
 
+{- This dummy API makes simple GET requests with tasks to demonstrate how to 
+   use Task.Parallel.
+-}
+
 import Http exposing (Error(..))
 import Json.Decode exposing (Decoder, bool, int, list, map4, map5, string, field)
 import Task exposing (Task)
