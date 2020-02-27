@@ -416,11 +416,7 @@ attemptMap2 : (a -> b -> c)
     -> TaskConfig2 x a b msg
     -> ( State2 a b, Cmd msg )
 attemptMap2 mapFunc successMsg failureMsg config = 
-    let
-        mapSuccess =
-            (\a b -> mapFunc a b |> successMsg)
-    in
-    attempt2 mapSuccess failureMsg config
+    attempt2 (\a b -> mapFunc a b |> successMsg) failureMsg config
 
 type TaskConfig2 x a b msg
     = TaskConfig2 (Task x a) (Task x b) (Msg2 x a b msg -> msg)
