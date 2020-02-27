@@ -1,12 +1,13 @@
-module FetchTwo exposing (main)
+module FetchAndMap exposing (main)
 
-{- This example makes two HTTP requests before it can render the page content. -}
+{- This example makes two HTTP requests and maps them to a single value
+   before sending the finished message. -}
 
 import Api exposing (Comment, Post)
 import Browser
 import Html exposing (Html, div, h1, li, p, text, ul)
 import Http
-import Task.Parallel exposing (State2, Msg2, attempt2, mapState, task2, update2)
+import Task.Parallel exposing (State2, Msg2, attemptMap2, mapState, task2, update2)
 
 
 main =
@@ -21,19 +22,23 @@ main =
 type Model
     = Loading (State2 Post (List Comment))
     | FailedToLoad String
-    | PageReady Post (List Comment)
+    | PageReady Int
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
     task2 DownloadUpdated Api.fetchPost Api.fetchComments
-        |> attempt2 DownloadFinished DownloadFailed
-        |> mapState Loading -- Alias for Tuple.mapFirst
+        |> attemptMap2
+            (\post comments -> String.length post.title + List.length comments)
+            DownloadFinished
+            DownloadFailed
+        |> mapState Loading
+
 
 type Msg
     = DownloadUpdated (Msg2 Http.Error Post (List Comment) Msg)
     | DownloadFailed Http.Error
-    | DownloadFinished Post (List Comment)
+    | DownloadFinished Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -48,8 +53,8 @@ update msg model =
                 DownloadFailed err ->
                     ( FailedToLoad <| Api.httpErrorString <| err, Cmd.none )
 
-                DownloadFinished post comments ->
-                    ( PageReady post comments, Cmd.none )
+                DownloadFinished result ->
+                    ( PageReady result, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -64,8 +69,5 @@ view model =
         FailedToLoad err ->
             text <| "Failed to load: " ++ err
 
-        PageReady post comments ->
-            div []
-                [ h1 [] [ text <| String.fromInt <| List.length <| comments ]
-                , p [] [ text post.title ]
-                ]
+        PageReady result ->
+            div [] [ h1 [] [ text ("Calculated result: " ++ String.fromInt result) ] ]
