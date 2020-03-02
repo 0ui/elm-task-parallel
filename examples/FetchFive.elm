@@ -10,7 +10,7 @@ import Browser
 import Html exposing (Html, div, h1, h2, img, li, p, text, ul)
 import Html.Attributes exposing (src)
 import Http
-import Task.Parallel exposing (Msg5, State5, attempt5, update5)
+import Task.Parallel exposing (Msg5, State5, attempt5, mapState, Task5(..), update5)
 import Time
 
 
@@ -31,15 +31,13 @@ type Model
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    let
-        ( loadingState, fetchCmd ) =
-            attempt5 DownloadUpdated Api.fetchPost Api.fetchComments Time.now Api.fetchPhoto Api.fetchTodo
-    in
-    ( Loading loadingState, fetchCmd )
+    Task5 Api.fetchPost Api.fetchComments Time.now (Api.fetchPhotoById 1) Api.fetchTodo
+        |> attempt5 DownloadUpdated DownloadFinished DownloadFailed
+        |> mapState Loading -- Alias for Tuple.mapFirst
 
 
 type Msg
-    = DownloadUpdated (Msg5 Http.Error Post (List Comment) Time.Posix Photo Todo)
+    = DownloadUpdated (Msg5 Msg Http.Error Post (List Comment) Time.Posix Photo Todo)
     | DownloadFailed Http.Error
     | DownloadFinished Post (List Comment) Time.Posix Photo Todo
 
@@ -47,14 +45,11 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
-        Loading downloadState ->
+        Loading taskState ->
             case msg of
-                DownloadUpdated downloadMsg ->
-                    let
-                        ( nextState, nextCmd ) =
-                            update5 downloadState downloadMsg DownloadFinished DownloadFailed
-                    in
-                    ( Loading nextState, nextCmd )
+                DownloadUpdated taskMsg ->
+                    update5 taskMsg taskState
+                        |> mapState Loading
 
                 DownloadFailed err ->
                     ( FailedToLoad <| Api.httpErrorString <| err, Cmd.none )

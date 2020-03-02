@@ -10,38 +10,34 @@ import Http
 import Task.Parallel
 
 main =
-  Browser.element
-    { init = init
-    , update = update
-    , subscriptions = always Sub.none
-    , view = view
-    }
+    Browser.element
+        { init = init
+        , update = update
+        , subscriptions = always Sub.none
+        , view = view
+        }
 
 type Model
-  = Loading (Task.Parallel.ListState Post)
-  | FailedToLoad String
-  | PageReady (List Post)
+    = Loading (Task.Parallel.ListState Post)
+    | FailedToLoad String
+    | PageReady (List Post)
 
 
 init : () -> (Model, Cmd Msg)
 init _ =
-    let
-        ( loadingState, fetchCmd ) =
-            Task.Parallel.attemptList
-              DownloadUpdated
-              [ Api.fetchPostById 1
-              , Api.fetchPostById 2
-              , Api.fetchPostById 42
-              , Api.fetchPostById 4
-              , Api.fetchPostById 5
-              , Api.fetchPostById 12
-              ]
-    in
-    ( Loading loadingState, fetchCmd )
+        [ Api.fetchPostById 1
+        , Api.fetchPostById 2
+        , Api.fetchPostById 42
+        , Api.fetchPostById 4
+        , Api.fetchPostById 5
+        , Api.fetchPostById 12
+        ]
+          |> Task.Parallel.attemptList DownloadUpdated DownloadFinished DownloadFailed
+          |> Task.Parallel.mapState Loading
 
 
 type Msg
-    = DownloadUpdated (Task.Parallel.ListMsg Http.Error Post)
+    = DownloadUpdated (Task.Parallel.ListMsg Msg Http.Error Post)
     | DownloadFailed Http.Error
     | DownloadFinished (List Post)
 
@@ -52,11 +48,9 @@ update msg model =
         Loading downloadState ->
             case msg of
                 DownloadUpdated downloadMsg ->
-                    let
-                        ( nextState, nextCmd ) =
-                            Task.Parallel.updateList downloadState downloadMsg DownloadFinished DownloadFailed
-                    in
-                    ( Loading nextState, nextCmd )
+                    Task.Parallel.updateList downloadState downloadMsg
+                        |> Task.Parallel.mapState Loading
+
                 DownloadFailed err ->
                     ( FailedToLoad <| Api.httpErrorString <| err, Cmd.none )
 

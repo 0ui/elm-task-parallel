@@ -6,7 +6,7 @@ import Api exposing (Comment, Post)
 import Browser
 import Html exposing (Html, div, h1, li, p, text, ul)
 import Http
-import Task.Parallel exposing (State2, Msg2, attempt2, mapState, task2, update2)
+import Task.Parallel exposing (State2, Msg2, attempt2, mapState, Task2(..), update2)
 
 
 main =
@@ -26,12 +26,12 @@ type Model
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    task2 DownloadUpdated Api.fetchPost Api.fetchComments
-        |> attempt2 DownloadFinished DownloadFailed
+    Task2 Api.fetchPost Api.fetchComments
+        |> attempt2 DownloadUpdated DownloadFinished DownloadFailed
         |> mapState Loading -- Alias for Tuple.mapFirst
 
 type Msg
-    = DownloadUpdated (Msg2 Http.Error Post (List Comment) Msg)
+    = DownloadUpdated (Msg2 Msg Http.Error Post (List Comment))
     | DownloadFailed Http.Error
     | DownloadFinished Post (List Comment)
 

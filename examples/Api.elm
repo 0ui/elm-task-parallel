@@ -1,7 +1,8 @@
 module Api exposing
-    ( fetchPhoto
+    ( fetchPhotoById
     , fetchPost
     , fetchPostById
+    , fetchCommentsById
     , fetchComments
     , httpErrorString
     , fetchTodo
@@ -30,9 +31,9 @@ getTask path decoder =
         , timeout = Nothing
         }
 
-fetchPhoto : Task Error Photo
-fetchPhoto = 
-    getTask "https://jsonplaceholder.typicode.com/photos/1" photoDecoder
+fetchPhotoById : Int -> Task Error Photo
+fetchPhotoById id = 
+    getTask ("https://jsonplaceholder.typicode.com/photos/" ++ (String.fromInt id)) photoDecoder
 
 fetchPost : Task Error Post
 fetchPost = 
@@ -45,6 +46,10 @@ fetchPostById id =
 fetchTodo : Task Error Todo
 fetchTodo = 
     getTask "https://jsonplaceholder.typicode.com/todos/12" todoDecoder
+
+fetchCommentsById : Int -> Task Error (List Comment)
+fetchCommentsById id = 
+    getTask ("https://jsonplaceholder.typicode.com/posts/" ++ String.fromInt id ++ "/comments") (list commentDecoder)
 
 fetchComments : Task Error (List Comment)
 fetchComments = 

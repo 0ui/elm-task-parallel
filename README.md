@@ -27,31 +27,33 @@ tasks of different result types (or a list of the same type). It will return a
 tuple with some internal state and a command.
 
 ```elm
-( internalState, fetchCmd ) =
-        attempt5
-            RequestsUpdated
-            Api.fetchUser
-            Api.fetchOptions
-            Api.fetchLocations
-            Api.fetchChat
-            Time.now
+init : () -> ( Model, Cmd Msg )
+init _ =
+    Task5 getUser getOptions getMaps getChat Time.now
+        |> attempt5 Updated AllFinished OneFailed
+        |> mapState Loading
 ```
 
 Store the state and pass along the command. Your model will need to store a
-`State` type matching the number of your tasks.
+[State](https://package.elm-lang.org/packages/0ui/elm-task-parallel/latest/Task-Parallel#State2)
+type matching the number of your tasks.
 
 ```elm
-State5 User Options Locations Chat Time.Posix
+type Model
+    = Loading (State5 User Options Maps Chat Posix)
+    | Success User Options Maps Chat Posix
+    | Failure Error
 ```
 
-The message you passed in to the helper function will need to accept an internal
-`Msg` with a similar type annotation, but including the error type to handle.
+The message you passed in to configure your tasks will need to handle internal updates via a
+[Msg](https://package.elm-lang.org/packages/0ui/elm-task-parallel/latest/Task-Parallel#Msg2)
+with a similar type annotation except including the Msg type of your module and the error type to handle.
 
 ```elm
 type Msg
-    = RequestsUpdated (Msg5 Http.Error User Options Locations Chat Time.Posix)
-    | RequestsFinished User Options Locations Chat Time.Posix
-    | RequestFailed Http.Error
+    = Updated (Msg5 Msg Error User Options Maps Chat Posix)
+    | AllFinished User Options Maps Chat Posix
+    | OneFailed Error
 ```
 
 and finally your update function will only need to handle three cases
@@ -62,18 +64,15 @@ and finally your update function will only need to handle three cases
 
 ```elm
 case msg of
-    RequestsUpdated internalMsg ->
-        let
-            ( nextState, nextCmd ) =
-                update5 model.internalState internalMsg RequestsFinished RequestFailed
-        in
-        ( { model | internalState = nextState }, nextCmd )
+    Updated taskMsg ->
+        update5 taskState taskMsg AllFinished OneFailed
+            |> mapState Loading
 
-    RequestsFinished user options locations chat time ->
-        ( { model | user = user, options = , locations = locations, chat = chat, currentTime = time }, Cmd.none )
+    AllFinished user options maps chat time ->
+        ( Success user options maps chat time, Cmd.none )
         
-    RequestFailed err ->
-        ( { model | maybeError = Just err, Cmd.none )
+    OneFailed err ->
+        ( Failure err , Cmd.none )
 
 ```
 
