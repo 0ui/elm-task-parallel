@@ -29,8 +29,12 @@ tuple with some internal state and a command.
 ```elm
 import Task.Parallel as Parallel
 
-start : ( Parallel.State5 Msg User Options Locations Chat Time.Posix, Cmd Msg )
-start =
+init : () -> ( Model, Cmd Msg )
+init _ =
+    doTasks |> Tuple.mapFirst PageLoading
+
+doTasks : ( Parallel.State5 Msg User Options Locations Chat Time.Posix, Cmd Msg )
+doTasks =
     ( taskState, taskCmd ) =
         Parallel.attempt5
             { task1 = Api.fetchUser
@@ -50,7 +54,7 @@ type as well as the types of your tasks.
 
 ```elm
 type Model
-    = PageLoading Parallel.State5 Msg User Options Locations Chat Time.Posix
+    = PageLoading (Parallel.State5 Msg User Options Locations Chat Time.Posix)
     | PageError Http.Error
     | PageLoaded User Options Locations Chat Time.Posix
 ```
@@ -66,15 +70,15 @@ type Msg
 
 and finally your update function will only need to handle three cases
 - Internal updates. Just call `Parallel.update[n]`, store the state, and pass
-  the command along
-- The error case of one task failing
-- The success case where all of the tasks have successfully completed
+  the command along.
+- The error case of one task failing.
+- The success case where all of the tasks have successfully completed.
 
 
 ```elm
 case msg of
     RequestsUpdated taskMsg ->
-        Parallel.update5 model.taskState taskMsg
+        Parallel.update5 taskState taskMsg
             |> Tuple.mapFirst PageLoading
 
     OneFailed err ->
