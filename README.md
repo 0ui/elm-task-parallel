@@ -42,8 +42,8 @@ doTasks =
             , task3 = Api.fetchLocations
             , task4 = Api.fetchChat
             , task5 = Time.now
-            , onUpdates = RequestsUpdated
-            , onFailure = OneFailed
+            , onUpdates = TaskUpdated
+            , onFailure = TaskFailed
             , onSuccess = AllFinished
             }
 ```
@@ -63,8 +63,8 @@ The message you passed in to the helper function will need to accept an internal
 
 ```elm
 type Msg
-    = RequestsUpdated (Parallel.Msg5 User Options Locations Chat Time.Posix)
-    | OneFailed Http.Error
+    = TaskUpdated (Parallel.Msg5 User Options Locations Chat Time.Posix)
+    | TaskFailed Http.Error
     | AllFinished User Options Locations Chat Time.Posix
 ```
 
@@ -77,11 +77,11 @@ and finally your update function will only need to handle three cases
 
 ```elm
 case msg of
-    RequestsUpdated taskMsg ->
+    TaskUpdated taskMsg ->
         Parallel.update5 taskState taskMsg
             |> Tuple.mapFirst PageLoading
 
-    OneFailed err ->
+    TaskFailed err ->
         ( PageError err, Cmd.none )
 
     AllFinished user options locations chat time ->
