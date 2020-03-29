@@ -3,7 +3,7 @@
     "name": "0ui/elm-task-parallel",
     "summary": "Run tasks in parallel and handle all the results in one message.",
     "license": "BSD-3-Clause",
-    "version": "1.0.2",
+    "version": "2.0.0",
     "exposed-modules": [
         "Task.Parallel"
     ],

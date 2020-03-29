@@ -18,7 +18,7 @@ main =
     }
 
 type Model
-  = Loading (Task.Parallel.ListState Post)
+  = Loading (Task.Parallel.ListState Msg Post)
   | FailedToLoad String
   | PageReady (List Post)
 
@@ -28,20 +28,24 @@ init _ =
     let
         ( loadingState, fetchCmd ) =
             Task.Parallel.attemptList
-              DownloadUpdated
-              [ Api.fetchPostById 1
-              , Api.fetchPostById 2
-              , Api.fetchPostById 42
-              , Api.fetchPostById 4
-              , Api.fetchPostById 5
-              , Api.fetchPostById 12
-              ]
+              { tasks =
+                [ Api.fetchPostById 1
+                , Api.fetchPostById 2
+                , Api.fetchPostById 42
+                , Api.fetchPostById 4
+                , Api.fetchPostById 5
+                , Api.fetchPostById 12
+                ]
+              , onUpdates = DownloadUpdated
+              , onFailure = DownloadFailed
+              , onSuccess = DownloadFinished
+              }
     in
     ( Loading loadingState, fetchCmd )
 
 
 type Msg
-    = DownloadUpdated (Task.Parallel.ListMsg Http.Error Post)
+    = DownloadUpdated (Task.Parallel.ListMsg Post)
     | DownloadFailed Http.Error
     | DownloadFinished (List Post)
 
@@ -52,13 +56,11 @@ update msg model =
         Loading downloadState ->
             case msg of
                 DownloadUpdated downloadMsg ->
-                    let
-                        ( nextState, nextCmd ) =
-                            Task.Parallel.updateList downloadState downloadMsg DownloadFinished DownloadFailed
-                    in
-                    ( Loading nextState, nextCmd )
+                  Task.Parallel.updateList downloadState downloadMsg
+                    |> Tuple.mapFirst Loading
+
                 DownloadFailed err ->
-                    ( FailedToLoad <| Api.httpErrorString <| err, Cmd.none )
+                  ( FailedToLoad <| Api.httpErrorString <| err, Cmd.none )
 
                 DownloadFinished posts ->
                     ( PageReady posts, Cmd.none )

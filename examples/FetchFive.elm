@@ -10,7 +10,7 @@ import Browser
 import Html exposing (Html, div, h1, h2, img, li, p, text, ul)
 import Html.Attributes exposing (src)
 import Http
-import Task.Parallel exposing (Msg5, State5, attempt5, update5)
+import Task.Parallel
 import Time
 
 
@@ -24,7 +24,7 @@ main =
 
 
 type Model
-    = Loading (State5 Post (List Comment) Time.Posix Photo Todo)
+    = Loading (Task.Parallel.State5 Msg Post (List Comment) Time.Posix Photo Todo)
     | FailedToLoad String
     | PageReady Post (List Comment) Time.Posix Photo Todo
 
@@ -33,15 +33,24 @@ init : () -> ( Model, Cmd Msg )
 init _ =
     let
         ( loadingState, fetchCmd ) =
-            attempt5 DownloadUpdated Api.fetchPost Api.fetchComments Time.now Api.fetchPhoto Api.fetchTodo
+            Task.Parallel.attempt5
+                { task1 = Api.fetchPost
+                , task2 = Api.fetchComments
+                , task3 = Time.now
+                , task4 = Api.fetchPhoto
+                , task5 = Api.fetchTodo
+                , onUpdates = TaskUpdated 
+                , onFailure = DownloadFailed
+                , onSuccess = AllFinished
+                }
     in
     ( Loading loadingState, fetchCmd )
 
 
 type Msg
-    = DownloadUpdated (Msg5 Http.Error Post (List Comment) Time.Posix Photo Todo)
+    = TaskUpdated (Task.Parallel.Msg5 Post (List Comment) Time.Posix Photo Todo)
     | DownloadFailed Http.Error
-    | DownloadFinished Post (List Comment) Time.Posix Photo Todo
+    | AllFinished Post (List Comment) Time.Posix Photo Todo
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -49,17 +58,14 @@ update msg model =
     case model of
         Loading downloadState ->
             case msg of
-                DownloadUpdated downloadMsg ->
-                    let
-                        ( nextState, nextCmd ) =
-                            update5 downloadState downloadMsg DownloadFinished DownloadFailed
-                    in
-                    ( Loading nextState, nextCmd )
+                TaskUpdated downloadMsg ->
+                    Task.Parallel.update5 downloadState downloadMsg
+                        |> Tuple.mapFirst Loading
 
                 DownloadFailed err ->
                     ( FailedToLoad <| Api.httpErrorString <| err, Cmd.none )
 
-                DownloadFinished post comments time photo todo ->
+                AllFinished post comments time photo todo ->
                     ( PageReady post comments time photo todo, Cmd.none )
 
         _ ->

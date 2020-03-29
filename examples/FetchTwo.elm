@@ -20,7 +20,7 @@ main =
 
 
 type Model
-    = Loading (Task.Parallel.State2 Post (List Comment))
+    = Loading (Task.Parallel.State2 Msg Post (List Comment))
     | FailedToLoad String
     | PageReady Post (List Comment)
 
@@ -29,13 +29,19 @@ init : () -> ( Model, Cmd Msg )
 init _ =
     let
         ( loadingState, fetchCmd ) =
-            Task.Parallel.attempt2 DownloadUpdated Api.fetchPost Api.fetchComments
+            Task.Parallel.attempt2
+                { task1 = Api.fetchPost
+                , task2 = Api.fetchComments
+                , onUpdates = DownloadUpdated
+                , onFailure = DownloadFailed
+                , onSuccess = DownloadFinished
+                }
     in
     ( Loading loadingState, fetchCmd )
 
 
 type Msg
-    = DownloadUpdated (Task.Parallel.Msg2 Http.Error Post (List Comment))
+    = DownloadUpdated (Task.Parallel.Msg2 Post (List Comment))
     | DownloadFailed Http.Error
     | DownloadFinished Post (List Comment)
 
@@ -46,11 +52,8 @@ update msg model =
         Loading downloadState ->
             case msg of
                 DownloadUpdated downloadMsg ->
-                    let
-                        ( nextState, nextCmd ) =
-                            Task.Parallel.update2 downloadState downloadMsg DownloadFinished DownloadFailed
-                    in
-                    ( Loading nextState, nextCmd )
+                    Task.Parallel.update2 downloadState downloadMsg
+                        |> Tuple.mapFirst Loading
 
                 DownloadFailed err ->
                     ( FailedToLoad <| Api.httpErrorString <| err, Cmd.none )

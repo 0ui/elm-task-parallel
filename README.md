@@ -22,67 +22,74 @@ This library is designed to do that for you.
 
 ## How to use
 
-Instead of using `Task.attempt`, use one of the helper functions to run up to 5
+Instead of using `Task.attempt`, use one of the helper functions to run up to 9
 tasks of different result types (or a list of the same type). It will return a
 tuple with some internal state and a command.
 
 ```elm
-( internalState, fetchCmd ) =
-        attempt5
-            RequestsUpdated
-            Api.fetchUser
-            Api.fetchOptions
-            Api.fetchLocations
-            Api.fetchChat
-            Time.now
+import Task.Parallel as Parallel
+
+start : ( Parallel.State5 Msg User Options Locations Chat Time.Posix, Cmd Msg )
+start =
+    ( taskState, taskCmd ) =
+        Parallel.attempt5
+            { task1 = Api.fetchUser
+            , task2 = Api.fetchOptions
+            , task3 = Api.fetchLocations
+            , task4 = Api.fetchChat
+            , task5 = Time.now
+            , onUpdates = RequestsUpdated
+            , onFailure = OneFailed
+            , onSuccess = AllFinished
+            }
 ```
 
 Store the state and pass along the command. Your model will need to store a
-`State` type matching the number of your tasks.
+`Parallel.State[n]` matching the number of your tasks and reference your `Msg`
+type as well as the types of your tasks.
 
 ```elm
-State5 User Options Locations Chat Time.Posix
+type Model
+    = PageLoading Parallel.State5 Msg User Options Locations Chat Time.Posix
+    | PageError Http.Error
+    | PageLoaded User Options Locations Chat Time.Posix
 ```
-
 The message you passed in to the helper function will need to accept an internal
-`Msg` with a similar type annotation, but including the error type to handle.
+`Parallel.Msg[n]` referencing only the types of the tasks.
 
 ```elm
 type Msg
-    = RequestsUpdated (Msg5 Http.Error User Options Locations Chat Time.Posix)
-    | RequestsFinished User Options Locations Chat Time.Posix
-    | RequestFailed Http.Error
+    = RequestsUpdated (Parallel.Msg5 User Options Locations Chat Time.Posix)
+    | OneFailed Http.Error
+    | AllFinished User Options Locations Chat Time.Posix
 ```
 
 and finally your update function will only need to handle three cases
-- Internal updates where you again store the state and pass the command along
+- Internal updates. Just call `Parallel.update[n]`, store the state, and pass
+  the command along
+- The error case of one task failing
 - The success case where all of the tasks have successfully completed
-- The error case of the first task to fail
 
 
 ```elm
 case msg of
-    RequestsUpdated internalMsg ->
-        let
-            ( nextState, nextCmd ) =
-                update5 model.internalState internalMsg RequestsFinished RequestFailed
-        in
-        ( { model | internalState = nextState }, nextCmd )
+    RequestsUpdated taskMsg ->
+        Parallel.update5 model.taskState taskMsg
+            |> Tuple.mapFirst PageLoading
 
-    RequestsFinished user options locations chat time ->
-        ( { model | user = user, options = , locations = locations, chat = chat, currentTime = time }, Cmd.none )
-        
-    RequestFailed err ->
-        ( { model | maybeError = Just err, Cmd.none )
+    OneFailed err ->
+        ( PageError err, Cmd.none )
 
+    AllFinished user options locations chat time ->
+        ( PageLoaded user options locations chat time, Cmd.none )
 ```
 
 ## Caveats
 
-- If the tasks have different result types, you're limited to 5 tasks (mirroring
-`Maybe.map`). For HTTP requests, this is a limit I haven't run into yet. For
-lists of tasks, there is no limit.
+- If the tasks have different result types, you're limited to 9 tasks.
+For HTTP requests, this is a limit I haven't run into yet. For lists of tasks,
+there is no limit.
 - Updating the internal state of this library adds one case to your update
-function, however in the case of 5 tasks you could already have 10 cases
+function, however in the case of 9 tasks you could already have 18 cases
 just to update those + a completion check. This library limits those to just
 three.
