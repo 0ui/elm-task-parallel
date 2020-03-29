@@ -1,12 +1,10 @@
 module Task.Parallel exposing
     ( attempt2, attempt3, attempt4, attempt5, attemptList
     , attempt
-    , attempt2Map, attempt3Map, attempt4Map, attempt5Map
-    , attempt2AndThen, attempt3AndThen, attempt4AndThen, attempt5AndThen
     , update2, update3, update4, update5, updateList
-    , mapState, mapMsg
-    , Task2(..), Task3(..), Task4(..), Task5(..)
-    , State2, State3, State4, State5, Msg2, Msg3, Msg4, Msg5, ListState, ListMsg
+    , State2, State3, State4, State5, Msg2, Msg3, Msg4, Msg5, StateList, MsgList
+    , Success2(..), Success3(..), Success4(..), Success5(..), SuccessList(..)
+    , UpdateModel(..)
     )
 
 {-| This library helps you run tasks in parallel when you only need the results
@@ -16,117 +14,152 @@ good use case is handling the result of multiple HTTP requests.
 
 ## Task Helpers
 
-@docs attempt2, attempt3, attempt4, attempt5, attemptList
+Functions for parallelizing tasks of different result types.
+
+@docs attempt2, attempt3, attempt4, attempt5
 
 
-## Less Common Helpers
+## Routing
 
-@docs attempt
+Route the results of your tasks to a success message or to another task.
 
-
-## Map Results
-
-@docs attempt2Map, attempt3Map, attempt4Map, attempt5Map
-
-
-## Chain Additional Tasks
-
-@docs attempt2AndThen, attempt3AndThen, attempt4AndThen, attempt5AndThen
-
+@docs Success2, Success3, Success4, Success5
 
 ## Update
 
 You will have to pass internal messages and commands along in your update
 function in order to eventually get your results.
 
-@docs update2, update3, update4, update5, updateList
+@docs update2, update3, update4, update5
+
+## List Helpers
+
+Functions for dealing with lists of tasks. This is helpful if all of your tasks
+are of the same type.
+
+@docs attemptList, updateList, SuccessList
 
 
-## Convenience
+## Less Common Helpers
 
-@docs mapState
+@docs attempt
 
-
-## Task
-
-A type to configure your parallel tasks.
-
-@docs Task2, Task3, Task4, Task5
-
-
-## Other Types
+## Opaque Types
 
 These are the types you will have to annotate your Model and Msg with in order to
 track the state of parallel tasks. These require the error type and result types of
 all of your tasks as well as the Msg type from your module that it will be sending.
 See [update2](#update2) for an example
 
-@docs State2, State3, State4, State5, Msg2, Msg3, Msg4, Msg5, ListState, ListMsg
+@docs State2, State3, State4, State5, Msg2, Msg3, Msg4, Msg5, StateList, MsgList
 
 -}
 
 import Task exposing (Task)
 
-
 {-|
 
-    Task.Parallel.Task2 fetchString fetchInt
-        |> attempt2 TaskStateUpdated AllFinished OneFailed
+`Success2` accepts a message to sent the results to
+
+    Parallel.attempt2
+        { task1 = Api.fetchPost
+        , task2 = Api.fetchComments
+        , onFailure = DownloadFailed
+        , onSuccess = Parallel.Success2 DownloadFinished
+        , onUpdates = DownloadUpdated
+        , updateModel = Loading
+        }
+
+`Success2AndThen` accepts a message that creates the next set of tasks based
+  on your results
+
+    Parallel.attempt2
+        { task1 = Api.fetchPost
+        , task2 = Api.fetchComments
+        , onFailure = DownloadFailed
+        , onSuccess = Parallel.Success2AndThen (\post comments ->
+            doMoreTasks post comments
+        )
+        , onUpdates = DownloadUpdated
+        , updateModel = Loading
+        }
 
 -}
-type Task2 x a b
-    = Task2 (Task x a) (Task x b)
+
+type Success2 model msg a b
+    = Success2 (a -> b -> msg)
+    | Success2AndThen (a -> b -> ( model, Cmd msg ))
 
 
-{-| -}
-type Task3 x a b c
-    = Task3 (Task x a) (Task x b) (Task x c)
+{-|-}
+type Success3 model msg a b c
+    = Success3 (a -> b -> c -> msg)
+    | Success3AndThen (a -> b -> c -> ( model, Cmd msg ))
 
 
-{-| -}
-type Task4 x a b c d
-    = Task4 (Task x a) (Task x b) (Task x c) (Task x d)
+{-|-}
+type Success4 model msg a b c d
+    = Success4 (a -> b -> c -> d -> msg)
+    | Success4AndThen (a -> b -> c -> d -> ( model, Cmd msg ))
 
 
-{-| -}
-type Task5 x a b c d e
-    = Task5 (Task x a) (Task x b) (Task x c) (Task x d) (Task x e)
+{-|-}
+type Success5 model msg a b c d e
+    = Success5 (a -> b -> c -> d -> e -> msg)
+    | Success5AndThen (a -> b -> c -> d -> e -> ( model, Cmd msg ))
 
 
+{-|-}
+type SuccessList model msg a
+    = SuccessList (List a -> msg)
+    | SuccessListAndThen (List a -> ( model, Cmd msg ))
+
+type UpdateModel state model
+    = UpdateModel (state -> model -> model) (state -> model)
+    | UpdateComplete (state -> model)
 
 {-| Opaque type for storing state of tasks.
 -}
-type State2 a b
+type State2 model msg x a b
     = FailedState2
     | State2
         { a : Maybe a
         , b : Maybe b
+        , onFailure : x -> msg
+        , onSuccess : Success2 model msg a b
+        , updateModel : UpdateModel (State2 model msg x a b) model
         }
 
 
 {-| -}
-type State3 a b c
+type State3 model msg x a b c
     = FailedState3
     | State3
         { a : Maybe a
         , b : Maybe b
         , c : Maybe c
+        , onFailure : x -> msg
+        , onSuccess : Success3 model msg a b c
+        , updateModel : UpdateModel (State3 model msg x a b c) model
         }
 
 
 {-| -}
-type State4 a b c d
+type State4 model msg x a b c d
     = FailedState4
     | State4
         { a : Maybe a
         , b : Maybe b
         , c : Maybe c
         , d : Maybe d
+        , onFailure : x -> msg
+        , onSuccess : Success4 model msg a b c d
+        , updateModel : UpdateModel (State4 model msg x a b c d) model
         }
 
 
 {-| -}
-type State5 a b c d e
+type State5 model msg x a b c d e
     = FailedState5
     | State5
         { a : Maybe a
@@ -134,42 +167,65 @@ type State5 a b c d e
         , c : Maybe c
         , d : Maybe d
         , e : Maybe e
+        , onFailure : x -> msg
+        , onSuccess : Success5 model msg a b c d e
+        , updateModel : UpdateModel (State5 model msg x a b c d e) model
         }
 
 
+{-| Opaque type for storing state of task lists.
+-}
+type StateList model msg x a
+    = StateListFailed
+    | StateList
+        { list : List (Maybe a)
+        , onFailure : x -> msg
+        , onSuccess : SuccessList model msg a
+        , updateModel : UpdateModel (StateList model msg x a) model
+        }
+
 {-| Opaque type for updating state of tasks.
 -}
-type Msg2 msg x a b
-    = LoadedA2 (a -> b -> Cmd msg) a
-    | LoadedB2 (a -> b -> Cmd msg) b
-    | FailedToLoad2 (x -> Cmd msg) x
+type Msg2 x a b
+    = LoadedA2 a
+    | LoadedB2 b
+    | FailedToLoad2 x
 
 
 {-| -}
-type Msg3 msg x a b c
-    = LoadedA3 (a -> b -> c -> Cmd msg) a
-    | LoadedB3 (a -> b -> c -> Cmd msg) b
-    | LoadedC3 (a -> b -> c -> Cmd msg) c
-    | FailedToLoad3 (x -> Cmd msg) x
+type Msg3 x a b c
+    = LoadedA3 a
+    | LoadedB3 b
+    | LoadedC3 c
+    | FailedToLoad3 x
 
 
 {-| -}
-type Msg4 msg x a b c d
-    = LoadedA4 (a -> b -> c -> d -> Cmd msg) a
-    | LoadedB4 (a -> b -> c -> d -> Cmd msg) b
-    | LoadedC4 (a -> b -> c -> d -> Cmd msg) c
-    | LoadedD4 (a -> b -> c -> d -> Cmd msg) d
-    | FailedToLoad4 (x -> Cmd msg) x
+type Msg4 x a b c d
+    = LoadedA4 a
+    | LoadedB4 b
+    | LoadedC4 c
+    | LoadedD4 d
+    | FailedToLoad4 x
 
 
 {-| -}
-type Msg5 msg x a b c d e
-    = LoadedA5 (a -> b -> c -> d -> e -> Cmd msg) a
-    | LoadedB5 (a -> b -> c -> d -> e -> Cmd msg) b
-    | LoadedC5 (a -> b -> c -> d -> e -> Cmd msg) c
-    | LoadedD5 (a -> b -> c -> d -> e -> Cmd msg) d
-    | LoadedE5 (a -> b -> c -> d -> e -> Cmd msg) e
-    | FailedToLoad5 (x -> Cmd msg) x
+type Msg5 x a b c d e
+    = LoadedA5 a
+    | LoadedB5 b
+    | LoadedC5 c
+    | LoadedD5 d
+    | LoadedE5 e
+    | FailedToLoad5 x
+
+
+
+{-| Opaque type for updating state of task lists.
+-}
+type MsgList x a
+    = ItemLoaded Int a
+    | ItemFailed x
+
 
 
 {-| Attempt a single task. The benefit of this over Task.attempt is that it
@@ -191,190 +247,140 @@ attempt successMsg failureMsg task1 =
     task1 |> routeTo successMsg failureMsg
 
 
-{-| Attempt two tasks which will send an update when either all tasks finish
-successfully or one fails. The returned [State](#State2) will be used in your main
-update function to call [`update`](#update) and pass internal messages.
+{-| Attempt two tasks in parallel which will send an update when either all
+tasks finish successfully or one fails. 
 
     type Msg
-        = TaskStateUpdated (Task.Parallel.Msg2 Msg Http.Error String Int)
+        = TaskUpdated (Task.Parallel.Msg2 Model Msg Http.Error String Int)
         | OneFailed Http.Error
         | AllFinished String Int
 
-    doTask : ( Task.Parallel.State2 String Int, Cmd Msg )
+    doTask : ( Model, Cmd Msg )
     doTask =
-        Task.Parallel.Task2 fetchString fetchInt
-            |> attempt2 TaskStateUpdated AllFinished OneFailed
+        Parallel.attempt2
+            { task1 = Api.getUser
+            , task2 = Api.getOptions
+            , onFailure = OneFailed
+            , onSuccess = Parallel.OnSuccess2 AllFinished
+            , onUpdates = TasUpdated
+            , updateModel = LoadingState
+            }
 
 -}
 attempt2 :
-    (Msg2 msg x a b -> msg)
-    -> (a -> b -> msg)
-    -> (x -> msg)
-    -> Task2 x a b
-    -> ( State2 a b, Cmd msg )
-attempt2 updateMsg successMsg failureMsg config =
-    task2 updateMsg (\a b -> successMsg a b |> toCmd) (failureMsg >> toCmd) config
+    { task1 : Task x a
+    , task2 : Task x b
+    , onFailure : x -> msg
+    , onSuccess : Success2 model msg a b
+    , onUpdates : Msg2 x a b -> msg
+    , updateModel : UpdateModel (State2 model msg x a b) model
+    }
+    -> ( model, Cmd msg )
+attempt2 config =
+    ( getInitialFunction config.updateModel <| State2
+        { a = Nothing
+        , b = Nothing
+        , onFailure = config.onFailure
+        , onSuccess = config.onSuccess
+        , updateModel = config.updateModel
+        }
+    , [ config.task1 |> routeTo (config.onUpdates << LoadedA2) (config.onUpdates << FailedToLoad2)
+      , config.task2 |> routeTo (config.onUpdates << LoadedB2) (config.onUpdates << FailedToLoad2)
+      ]
+        |> Cmd.batch
+    )
 
 
 {-| -}
 attempt3 :
-    (Msg3 msg x a b c -> msg)
-    -> (a -> b -> c -> msg)
-    -> (x -> msg)
-    -> Task3 x a b c
-    -> ( State3 a b c, Cmd msg )
-attempt3 updateMsg successMsg failureMsg config =
-    task3 updateMsg (\a b c -> successMsg a b c |> toCmd) (failureMsg >> toCmd) config
-
+    { task1 : Task x a
+    , task2 : Task x b
+    , task3 : Task x c
+    , onFailure : x -> msg
+    , onSuccess : Success3 model msg a b c
+    , onUpdates : Msg3 x a b c -> msg
+    , updateModel : UpdateModel (State3 model msg x a b c) model
+    }
+    -> ( model, Cmd msg )
+attempt3 config =
+    ( getInitialFunction config.updateModel <| State3
+        { a = Nothing
+        , b = Nothing
+        , c = Nothing
+        , onFailure = config.onFailure
+        , onSuccess = config.onSuccess
+        , updateModel = config.updateModel
+        }
+    , [ config.task1 |> routeTo (config.onUpdates << LoadedA3) (config.onUpdates << FailedToLoad3)
+      , config.task2 |> routeTo (config.onUpdates << LoadedB3) (config.onUpdates << FailedToLoad3)
+      , config.task3 |> routeTo (config.onUpdates << LoadedC3) (config.onUpdates << FailedToLoad3)
+      ]
+        |> Cmd.batch
+    )
 
 {-| -}
 attempt4 :
-    (Msg4 msg x a b c d -> msg)
-    -> (a -> b -> c -> d -> msg)
-    -> (x -> msg)
-    -> Task4 x a b c d
-    -> ( State4 a b c d, Cmd msg )
-attempt4 updateMsg successMsg failureMsg config =
-    task4 updateMsg (\a b c d -> successMsg a b c d |> toCmd) (failureMsg >> toCmd) config
+    { task1 : Task x a
+    , task2 : Task x b
+    , task3 : Task x c
+    , task4 : Task x d
+    , onFailure : x -> msg
+    , onSuccess : Success4 model msg a b c d
+    , onUpdates : Msg4 x a b c d -> msg
+    , updateModel : UpdateModel (State4 model msg x a b c d) model
+    }
+    -> ( model, Cmd msg )
+attempt4 config =
+    ( getInitialFunction config.updateModel <| State4
+        { a = Nothing
+        , b = Nothing
+        , c = Nothing
+        , d = Nothing
+        , onFailure = config.onFailure
+        , onSuccess = config.onSuccess
+        , updateModel = config.updateModel
+        }
+    , [ config.task1 |> routeTo (config.onUpdates << LoadedA4) (config.onUpdates << FailedToLoad4)
+      , config.task2 |> routeTo (config.onUpdates << LoadedB4) (config.onUpdates << FailedToLoad4)
+      , config.task3 |> routeTo (config.onUpdates << LoadedC4) (config.onUpdates << FailedToLoad4)
+      , config.task4 |> routeTo (config.onUpdates << LoadedD4) (config.onUpdates << FailedToLoad4)
+      ]
+        |> Cmd.batch
+    )
 
 
 {-| -}
 attempt5 :
-    (Msg5 msg x a b c d e -> msg)
-    -> (a -> b -> c -> d -> e -> msg)
-    -> (x -> msg)
-    -> Task5 x a b c d e
-    -> ( State5 a b c d e, Cmd msg )
-attempt5 updateMsg successMsg failureMsg config =
-    task5 updateMsg (\a b c d e -> successMsg a b c d e |> toCmd) (failureMsg >> toCmd) config
-
-
-{-| Like attempt2 except this will map the resulting values into one value
-that you can provide to your success message.
-
-    type Msg
-        = TaskUpdated (Task.Parallel.Msg2 Msg Http.Error Int Int)
-        | OneFailed Http.Error
-        | GotFinalString String
-
-    resultsToString : Int -> Int -> String
-    resultsToString someNum otherNum =
-        String.fromInt someNum ++ String.fromInt otherNum
-
-    doTask : ( Task.Parallel.State2 Int Int, Cmd Msg )
-    doTask =
-        Task.Parallel.Task2 fetchInt fetchOtherInt
-            |> attempt2Map resultsToString TaskUpdated GotFinalString OneFailed
-
--}
-attempt2Map :
-    (a -> b -> c)
-    -> (Msg2 msg x a b -> msg)
-    -> (c -> msg)
-    -> (x -> msg)
-    -> Task2 x a b
-    -> ( State2 a b, Cmd msg )
-attempt2Map mapFunc updateMsg successMsg failureMsg config =
-    task2 updateMsg (\a b -> mapFunc a b |> successMsg |> toCmd) (failureMsg >> toCmd) config
-
-
-{-| -}
-attempt3Map :
-    (a -> b -> c -> d)
-    -> (Msg3 msg x a b c -> msg)
-    -> (d -> msg)
-    -> (x -> msg)
-    -> Task3 x a b c
-    -> ( State3 a b c, Cmd msg )
-attempt3Map mapFunc updateMsg successMsg failureMsg config =
-    task3 updateMsg (\a b c -> mapFunc a b c |> successMsg |> toCmd) (failureMsg >> toCmd) config
-
-
-{-| -}
-attempt4Map :
-    (a -> b -> c -> d -> e)
-    -> (Msg4 msg x a b c d -> msg)
-    -> (e -> msg)
-    -> (x -> msg)
-    -> Task4 x a b c d
-    -> ( State4 a b c d, Cmd msg )
-attempt4Map mapFunc updateMsg successMsg failureMsg config =
-    task4 updateMsg (\a b c d -> mapFunc a b c d |> successMsg |> toCmd) (failureMsg >> toCmd) config
-
-
-{-| -}
-attempt5Map :
-    (a -> b -> c -> d -> e -> f)
-    -> (Msg5 msg x a b c d e -> msg)
-    -> (f -> msg)
-    -> (x -> msg)
-    -> Task5 x a b c d e
-    -> ( State5 a b c d e, Cmd msg )
-attempt5Map mapFunc updateMsg successMsg failureMsg config =
-    task5 updateMsg (\a b c d e -> mapFunc a b c d e |> successMsg |> toCmd) (failureMsg >> toCmd) config
-
-
-{-| Like attempt2 except it will attempt an additional task command after the first
-2 have completed. You can call Task.andThen on this additional task to chain
-sequential tasks after the parallel ones have completed.
-
-    type Msg
-        = TaskUpdated (Task.Parallel.Msg2 Msg Http.Error String Int)
-        | OneFailed Http.Error
-        | GotTimeWhenFinished Time.Posix
-
-    doTask : ( Task.Parallel.State2 String Int, Cmd Msg )
-    doTask =
-        Task.Parallel.Task2 fetchString fetchInt
-            |> Task.Parallel.attempt2AndThen getTimeWhenFinished TaskUpdated OneFailed
-
-    getTimeWhenFinished : String -> Int -> Cmd Msg
-    getTimeWhenFinished _ _ =
-        Task.perform GotTimeWhenFinished Time.now
-
--}
-attempt2AndThen :
-    (a -> b -> Cmd msg)
-    -> (Msg2 msg x a b -> msg)
-    -> (x -> msg)
-    -> Task2 x a b
-    -> ( State2 a b, Cmd msg )
-attempt2AndThen attemptSomeTask updateMsg failureMsg config =
-    task2 updateMsg attemptSomeTask (failureMsg >> toCmd) config
-
-
-{-| -}
-attempt3AndThen :
-    (a -> b -> c -> Cmd msg)
-    -> (Msg3 msg x a b c -> msg)
-    -> (x -> msg)
-    -> Task3 x a b c
-    -> ( State3 a b c, Cmd msg )
-attempt3AndThen attemptSomeTask updateMsg failureMsg config =
-    task3 updateMsg attemptSomeTask (failureMsg >> toCmd) config
-
-
-{-| -}
-attempt4AndThen :
-    (a -> b -> c -> d -> Cmd msg)
-    -> (Msg4 msg x a b c d -> msg)
-    -> (x -> msg)
-    -> Task4 x a b c d
-    -> ( State4 a b c d, Cmd msg )
-attempt4AndThen attemptSomeTask updateMsg failureMsg config =
-    task4 updateMsg attemptSomeTask (failureMsg >> toCmd) config
-
-
-{-| -}
-attempt5AndThen :
-    (a -> b -> c -> d -> e -> Cmd msg)
-    -> (Msg5 msg x a b c d e -> msg)
-    -> (x -> msg)
-    -> Task5 x a b c d e
-    -> ( State5 a b c d e, Cmd msg )
-attempt5AndThen attemptSomeTask updateMsg failureMsg config =
-    task5 updateMsg attemptSomeTask (failureMsg >> toCmd) config
-
+    { task1 : Task x a
+    , task2 : Task x b
+    , task3 : Task x c
+    , task4 : Task x d
+    , task5 : Task x e
+    , onFailure : x -> msg
+    , onSuccess : Success5 model msg a b c d e
+    , onUpdates : Msg5 x a b c d e -> msg
+    , updateModel : UpdateModel (State5 model msg x a b c d e) model
+    }
+    -> ( model, Cmd msg )
+attempt5 config =
+    ( getInitialFunction config.updateModel <| State5
+        { a = Nothing
+        , b = Nothing
+        , c = Nothing
+        , d = Nothing
+        , e = Nothing
+        , onFailure = config.onFailure
+        , onSuccess = config.onSuccess
+        , updateModel = config.updateModel
+        }
+    , [ config.task1 |> routeTo (config.onUpdates << LoadedA5) (config.onUpdates << FailedToLoad5)
+      , config.task2 |> routeTo (config.onUpdates << LoadedB5) (config.onUpdates << FailedToLoad5)
+      , config.task3 |> routeTo (config.onUpdates << LoadedC5) (config.onUpdates << FailedToLoad5)
+      , config.task4 |> routeTo (config.onUpdates << LoadedD5) (config.onUpdates << FailedToLoad5)
+      , config.task5 |> routeTo (config.onUpdates << LoadedE5) (config.onUpdates << FailedToLoad5)
+      ]
+        |> Cmd.batch
+    )
 
 {-| Handle updates for two tasks by calling `update2` inside of your main update
 function to keep this library's internal state updated. If they have either all
@@ -384,12 +390,12 @@ state to pass in on each subsequent `update`. This step is required with
 `attempt[n]` functions.
 
     type Model
-        = Loading (Task.Parallel.State2 Actor Film)
+        = Loading (State2 Model Msg Http.Error Actor Film)
         | Loaded Actor Film
         | LoadFailure Http.Error
 
     type Msg
-        = DownloadUpdated (Task.Parallel.Msg2 Msg Http.Error Actor Film)
+        = DownloadUpdated (Msg2 Http.Error Actor Film)
         | DownloadCompleted Actor Film
         | DownloadFailed Http.Error
 
@@ -399,10 +405,8 @@ state to pass in on each subsequent `update`. This step is required with
             Loading taskState ->
                 case msg of
                     DownloadUpdated taskMsg ->
-                        Task.Parallel.update2 taskState taskMsg
-                            |> Task.Parallel.mapState Loading
+                        update2 taskMsg taskState
 
-                    -- ( State2 Actor Film, Cmd Msg ) -> ( Model, Cmd Msg )
                     DownloadCompleted actor film ->
                         ( Loaded actor film, Cmd.none )
 
@@ -414,177 +418,216 @@ state to pass in on each subsequent `update`. This step is required with
                 ( model, Cmd.none )
 
 -}
-update2 : Msg2 msg x a b -> State2 a b -> ( State2 a b, Cmd msg )
-update2 msg state =
+update2 : Msg2 x a b -> State2 model msg x a b -> model -> ( model, Cmd msg )
+update2 msg state model =
     case state of
         FailedState2 ->
-            ( state, Cmd.none )
+            ( model, Cmd.none )
 
-        State2 loading ->
+        State2 loadingState ->
             let
-                nextCmd nextLoading successMsg =
-                    ( State2 nextLoading
-                    , Maybe.map2 successMsg nextLoading.a nextLoading.b
-                        |> Maybe.withDefault Cmd.none
-                    )
+                updateFunction = getUpdateFunction loadingState.updateModel model
+                nextCmd nextLoading =
+                    Maybe.map2 (\a b ->
+                        case loadingState.onSuccess of
+                            Success2 successMsg ->
+                                ( updateFunction (State2 nextLoading), successMsg a b |> toCmd )
+
+                            Success2AndThen task ->
+                                task a b
+                        )
+                        nextLoading.a
+                        nextLoading.b
+                        |> Maybe.withDefault ( updateFunction (State2 nextLoading), Cmd.none )
             in
             case msg of
-                LoadedA2 successMsg data ->
-                    nextCmd { loading | a = Just data } successMsg
+                LoadedA2 data ->
+                    nextCmd { loadingState | a = Just data }
 
-                LoadedB2 successMsg data ->
-                    nextCmd { loading | b = Just data } successMsg
+                LoadedB2 data ->
+                    nextCmd { loadingState | b = Just data }
 
-                FailedToLoad2 failureMsg err ->
-                    ( FailedState2, failureMsg err )
-
+                FailedToLoad2 err ->
+                    ( updateFunction FailedState2
+                    , loadingState.onFailure err |> toCmd
+                    )
 
 {-| -}
-update3 : Msg3 msg x a b c -> State3 a b c -> ( State3 a b c, Cmd msg )
-update3 msg state =
+update3 : Msg3 x a b c -> State3 model msg x a b c -> model -> ( model, Cmd msg )
+update3 msg state model =
     case state of
         FailedState3 ->
-            ( state, Cmd.none )
+            ( model, Cmd.none )
 
-        State3 loading ->
+        State3 loadingState ->
             let
-                nextCmd nextLoading successMsg =
-                    ( State3 nextLoading
-                    , Maybe.map3 successMsg nextLoading.a nextLoading.b nextLoading.c
-                        |> Maybe.withDefault Cmd.none
-                    )
+                updateFunction = getUpdateFunction loadingState.updateModel model
+                nextCmd nextLoading =
+                    Maybe.map3 (\a b c ->
+                        case loadingState.onSuccess of
+                            Success3 successMsg ->
+                                ( updateFunction (State3 nextLoading), successMsg a b c |> toCmd )
+
+                            Success3AndThen task ->
+                                task a b c
+                        )
+                        nextLoading.a
+                        nextLoading.b
+                        nextLoading.c
+                        |> Maybe.withDefault ( updateFunction (State3 nextLoading), Cmd.none )
             in
             case msg of
-                LoadedA3 successMsg data ->
-                    nextCmd { loading | a = Just data } successMsg
+                LoadedA3 data ->
+                    nextCmd { loadingState | a = Just data }
 
-                LoadedB3 successMsg data ->
-                    nextCmd { loading | b = Just data } successMsg
+                LoadedB3 data ->
+                    nextCmd { loadingState | b = Just data }
 
-                LoadedC3 successMsg data ->
-                    nextCmd { loading | c = Just data } successMsg
+                LoadedC3 data ->
+                    nextCmd { loadingState | c = Just data }
 
-                FailedToLoad3 failureMsg err ->
-                    ( FailedState3, failureMsg err )
-
+                FailedToLoad3 err ->
+                    ( updateFunction FailedState3
+                    , loadingState.onFailure err |> toCmd
+                    )
 
 {-| -}
-update4 : Msg4 msg x a b c d -> State4 a b c d -> ( State4 a b c d, Cmd msg )
-update4 msg state =
+update4 : Msg4 x a b c d -> State4 model msg x a b c d -> model -> ( model, Cmd msg )
+update4 msg state model =
     case state of
         FailedState4 ->
-            ( state, Cmd.none )
+            ( model, Cmd.none )
 
-        State4 loading ->
+        State4 loadingState ->
             let
-                nextCmd nextLoading successMsg =
-                    ( State4 nextLoading
-                    , Maybe.map4 successMsg nextLoading.a nextLoading.b nextLoading.c nextLoading.d
-                        |> Maybe.withDefault Cmd.none
-                    )
+                updateFunction = getUpdateFunction loadingState.updateModel model
+                nextCmd nextLoading =
+                    Maybe.map4 (\a b c d ->
+                        case loadingState.onSuccess of
+                            Success4 successMsg ->
+                                ( updateFunction (State4 nextLoading), successMsg a b c d |> toCmd )
+
+                            Success4AndThen task ->
+                                task a b c d
+                        )
+                        nextLoading.a
+                        nextLoading.b
+                        nextLoading.c
+                        nextLoading.d
+                        |> Maybe.withDefault ( updateFunction (State4 nextLoading), Cmd.none )
             in
             case msg of
-                LoadedA4 successMsg data ->
-                    nextCmd { loading | a = Just data } successMsg
+                LoadedA4 data ->
+                    nextCmd { loadingState | a = Just data }
 
-                LoadedB4 successMsg data ->
-                    nextCmd { loading | b = Just data } successMsg
+                LoadedB4 data ->
+                    nextCmd { loadingState | b = Just data }
 
-                LoadedC4 successMsg data ->
-                    nextCmd { loading | c = Just data } successMsg
+                LoadedC4 data ->
+                    nextCmd { loadingState | c = Just data }
 
-                LoadedD4 successMsg data ->
-                    nextCmd { loading | d = Just data } successMsg
+                LoadedD4 data ->
+                    nextCmd { loadingState | d = Just data }
 
-                FailedToLoad4 failureMsg err ->
-                    ( FailedState4, failureMsg err )
-
+                FailedToLoad4 err ->
+                    ( updateFunction FailedState4
+                    , loadingState.onFailure err |> toCmd
+                    )
 
 {-| -}
-update5 : Msg5 msg x a b c d e -> State5 a b c d e -> ( State5 a b c d e, Cmd msg )
-update5 msg state =
+update5 : Msg5 x a b c d e -> State5 model msg x a b c d e -> model -> ( model, Cmd msg )
+update5 msg state model =
     case state of
         FailedState5 ->
-            ( state, Cmd.none )
+            ( model, Cmd.none )
 
-        State5 loading ->
+        State5 loadingState ->
             let
-                nextCmd nextLoading successMsg =
-                    ( State5 nextLoading
-                    , Maybe.map5 successMsg nextLoading.a nextLoading.b nextLoading.c nextLoading.d nextLoading.e
-                        |> Maybe.withDefault Cmd.none
-                    )
+                updateFunction = getUpdateFunction loadingState.updateModel model
+                nextCmd nextLoading =
+                    Maybe.map5 (\a b c d e ->
+                        case loadingState.onSuccess of
+                            Success5 successMsg ->
+                                ( updateFunction (State5 nextLoading), successMsg a b c d e |> toCmd )
+
+                            Success5AndThen task ->
+                                task a b c d e
+                        )
+                        nextLoading.a
+                        nextLoading.b
+                        nextLoading.c
+                        nextLoading.d
+                        nextLoading.e
+                        |> Maybe.withDefault ( updateFunction (State5 nextLoading), Cmd.none )
             in
             case msg of
-                LoadedA5 successMsg data ->
-                    nextCmd { loading | a = Just data } successMsg
+                LoadedA5 data ->
+                    nextCmd { loadingState | a = Just data }
 
-                LoadedB5 successMsg data ->
-                    nextCmd { loading | b = Just data } successMsg
+                LoadedB5 data ->
+                    nextCmd { loadingState | b = Just data }
 
-                LoadedC5 successMsg data ->
-                    nextCmd { loading | c = Just data } successMsg
+                LoadedC5 data ->
+                    nextCmd { loadingState | c = Just data }
 
-                LoadedD5 successMsg data ->
-                    nextCmd { loading | d = Just data } successMsg
+                LoadedD5 data ->
+                    nextCmd { loadingState | d = Just data }
 
-                LoadedE5 successMsg data ->
-                    nextCmd { loading | e = Just data } successMsg
+                LoadedE5 data ->
+                    nextCmd { loadingState | e = Just data }
 
-                FailedToLoad5 failureMsg err ->
-                    ( FailedState5, failureMsg err )
-
-
-{-| Just an alias for Tuple.mapFirst but a reminder of a quick way to
-tag the task state in your model as in ( State, Cmd Msg ) -> ( Model, Cmd Msg )
-Perhaps it obfuscates too much but I found it helpful.
--}
-mapState : (a -> c) -> ( a, b ) -> ( c, b )
-mapState =
-    Tuple.mapFirst
-
-
-{-| Same but for commands. (childMsg -> parentMsg) -> ( State, Cmd childMsg ) -> ( State, Cmd parentMsg )
--}
-mapMsg : (b -> msg) -> ( a, Cmd b ) -> ( a, Cmd msg )
-mapMsg =
-    Tuple.mapSecond << Cmd.map
-
-{-| Opaque type for storing state of task lists.
--}
-type ListState a
-    = ListState (List (Maybe a))
-    | ListStateFailed
-
-
-{-| Opaque type for updating state of task lists.
--}
-type ListMsg msg x a
-    = ItemLoaded (List a -> msg) Int a
-    | ItemFailed (x -> msg) x
-
+                FailedToLoad5 err ->
+                    ( updateFunction FailedState5
+                    , loadingState.onFailure err |> toCmd
+                    )
 
 {-| Attempt a list of tasks which will update when all the tasks have finished
 or when one fails. Similar to a `Task.sequence` except in parallel.
 
-    type Msg
-        = DownloadUpdated (ListMsg Http.Error String)
-        | DownloadFailed Http.Error
-        | DownloadCompleted (List String)
+    type alias Model =
+        { taskState : StateList Model Msg Http.Error Actor
+        , actorList : Maybe (List Actor)
+        , loadingError : Maybe Http.Error
+        }
 
-    fetchNames : ( ListState String, nextCmd )
-    fetchNames =
-        attemptList DownloadUpdated [ fetchFirstName, fetchSecondName, fetchThirdName ]
+    fetchActors : ( Model, Cmd Msg )
+    fetchActors =
+        attemptList
+            { tasks =
+                [ Api.fetchPostById 1
+                , Api.fetchPostById 2
+                , Api.fetchPostById 8
+                ]
+            , onFailure = DownloadFailed
+            , onSuccess = SuccessList AllFinished
+            , onUpdates = DownloadUpdated
+            , updateModel = (\nextState ->
+                { model | taskState = nextState }
+              )
+            }
 
 -}
-attemptList : (ListMsg msg x a -> msg) -> (List a -> msg) -> (x -> msg) -> List (Task x a) -> ( ListState a, Cmd msg )
-attemptList updateMsg successMsg failureMsg tasks =
-    ( tasks |> List.map (always Nothing) |> ListState
-    , tasks
+attemptList :
+    { tasks : List (Task x a)
+    , onFailure : x -> msg
+    , onSuccess : SuccessList model msg a
+    , onUpdates : MsgList x a -> msg
+    , updateModel : UpdateModel (StateList model msg x a) model
+    }
+    -> ( model, Cmd msg )
+attemptList config =
+    ( getInitialFunction config.updateModel <|
+        StateList
+            { list = config.tasks |> List.map (always Nothing)
+            , onFailure = config.onFailure
+            , onSuccess = config.onSuccess
+            , updateModel = config.updateModel 
+            }
+    , config.tasks
         |> List.indexedMap
             (\index task ->
                 task
-                    |> routeTo (updateMsg << ItemLoaded successMsg index) (updateMsg << ItemFailed failureMsg)
+                    |> routeTo (config.onUpdates << ItemLoaded index) (config.onUpdates << ItemFailed)
             )
         |> Cmd.batch
     )
@@ -596,42 +639,47 @@ on each subsequent `updateList`. This step is required with
 [`attemptList`](#attemptList).
 
     type Msg
-        = DownloadUpdated (Task.Parallel.ListMsg Msg Http.Error Actor)
+        = DownloadUpdated (ListMsg Http.Error Actor)
         | DownloadFailed Http.Error
-        | DownloadCompleted (List Actor)
+        | AllFinished (List Actor)
 
     update : Msg -> Model -> ( Model, Cmd Msg )
     update msg model =
         case msg of
             DownloadUpdated taskMsg ->
-                let
-                    ( nextTaskState, nextCmd ) =
-                        Task.Parallel.updateList model.taskState taskMsg DownloadCompleted DownloadFailed
-                in
-                ( { model | taskState = nextTaskState }, nextCmd )
-
-            DownloadCompleted actors ->
-                ( { model | actorList = actors, Cmd.none )
+                updateList taskMsg model.taskState
 
             DownloadFailed err ->
-                ( { model | loadingError = Just err }, Cmd.none )
+                ( { model | loadingError = Just err }
+                , Cmd.none
+                )
 
+            AllFinished actors ->
+                ( { model | actorList = Just actors
+                , Cmd.none
+                )
 -}
-updateList : ListState a -> ListMsg msg x a -> ( ListState a, Cmd msg )
-updateList prevData listMsg =
-    case prevData of
-        ListStateFailed ->
-            ( prevData, Cmd.none )
 
-        ListState items ->
-            case listMsg of
-                ItemFailed failureMsg err ->
-                    ( ListStateFailed, failureMsg err |> toCmd )
+updateList : MsgList x a -> StateList model msg x a -> model -> ( model, Cmd msg )
+updateList msg prevState model =
+    case prevState of
+        StateListFailed ->
+            ( model, Cmd.none )
 
-                ItemLoaded successMsg index newItem ->
+        StateList loadingState ->
+            let
+                updateFunction = getUpdateFunction loadingState.updateModel model
+            in
+            case msg of
+                ItemFailed err ->
+                    ( updateFunction StateListFailed
+                    , loadingState.onFailure err |> toCmd
+                    )
+
+                ItemLoaded index newItem ->
                     let
-                        updatedItems =
-                            items
+                        updatedState =
+                            { loadingState | list = loadingState.list
                                 |> List.indexedMap
                                     (\i maybeItem ->
                                         if i == index then
@@ -640,13 +688,24 @@ updateList prevData listMsg =
                                         else
                                             maybeItem
                                     )
+                            }
                     in
-                    if List.any ((==) Nothing) updatedItems then
-                        ( ListState updatedItems, Cmd.none )
+                    if List.any ((==) Nothing) updatedState.list then
+                        ( updateFunction (StateList updatedState), Cmd.none )
 
                     else
-                        ( ListState updatedItems, successMsg (updatedItems |> List.filterMap identity) |> Task.succeed >> Task.perform identity )
+                        let
+                            loadedList =
+                                updatedState.list |> List.filterMap identity
+                        in
+                        case loadingState.onSuccess of
+                            SuccessList successMsg ->
+                                ( updateFunction (StateList updatedState)
+                                , loadedList |> successMsg |> toCmd
+                                )
 
+                            SuccessListAndThen task ->
+                                task loadedList
 
 
 -- Internal
@@ -671,68 +730,18 @@ toCmd : msg -> Cmd msg
 toCmd =
     Task.succeed >> Task.perform identity
 
+getUpdateFunction : UpdateModel state model -> model -> (state -> model)
+getUpdateFunction updateModel model =
+    case updateModel of
+        UpdateModel update _ ->
+            (\newState -> update newState model)
+        UpdateComplete update ->
+            (\newState -> update newState) 
 
-task2 :
-    (Msg2 msg x a b -> msg)
-    -> (a -> b -> Cmd msg)
-    -> (x -> Cmd msg)
-    -> Task2 x a b
-    -> ( State2 a b, Cmd msg )
-task2 updateMsg successMsg failureMsg (Task2 t1 t2) =
-    ( State2 { a = Nothing, b = Nothing }
-    , [ t1 |> routeTo (updateMsg << LoadedA2 successMsg) (updateMsg << FailedToLoad2 failureMsg)
-      , t2 |> routeTo (updateMsg << LoadedB2 successMsg) (updateMsg << FailedToLoad2 failureMsg)
-      ]
-        |> Cmd.batch
-    )
-
-
-task3 :
-    (Msg3 msg x a b c -> msg)
-    -> (a -> b -> c -> Cmd msg)
-    -> (x -> Cmd msg)
-    -> Task3 x a b c
-    -> ( State3 a b c, Cmd msg )
-task3 updateMsg successMsg failureMsg (Task3 t1 t2 t3) =
-    ( State3 { a = Nothing, b = Nothing, c = Nothing }
-    , [ t1 |> routeTo (updateMsg << LoadedA3 successMsg) (updateMsg << FailedToLoad3 failureMsg)
-      , t2 |> routeTo (updateMsg << LoadedB3 successMsg) (updateMsg << FailedToLoad3 failureMsg)
-      , t3 |> routeTo (updateMsg << LoadedC3 successMsg) (updateMsg << FailedToLoad3 failureMsg)
-      ]
-        |> Cmd.batch
-    )
-
-
-task4 :
-    (Msg4 msg x a b c d -> msg)
-    -> (a -> b -> c -> d -> Cmd msg)
-    -> (x -> Cmd msg)
-    -> Task4 x a b c d
-    -> ( State4 a b c d, Cmd msg )
-task4 updateMsg successMsg failureMsg (Task4 t1 t2 t3 t4) =
-    ( State4 { a = Nothing, b = Nothing, c = Nothing, d = Nothing }
-    , [ t1 |> routeTo (updateMsg << LoadedA4 successMsg) (updateMsg << FailedToLoad4 failureMsg)
-      , t2 |> routeTo (updateMsg << LoadedB4 successMsg) (updateMsg << FailedToLoad4 failureMsg)
-      , t3 |> routeTo (updateMsg << LoadedC4 successMsg) (updateMsg << FailedToLoad4 failureMsg)
-      , t4 |> routeTo (updateMsg << LoadedD4 successMsg) (updateMsg << FailedToLoad4 failureMsg)
-      ]
-        |> Cmd.batch
-    )
-
-
-task5 :
-    (Msg5 msg x a b c d e -> msg)
-    -> (a -> b -> c -> d -> e -> Cmd msg)
-    -> (x -> Cmd msg)
-    -> Task5 x a b c d e
-    -> ( State5 a b c d e, Cmd msg )
-task5 updateMsg successMsg failureMsg (Task5 t1 t2 t3 t4 t5) =
-    ( State5 { a = Nothing, b = Nothing, c = Nothing, d = Nothing, e = Nothing }
-    , [ t1 |> routeTo (updateMsg << LoadedA5 successMsg) (updateMsg << FailedToLoad5 failureMsg)
-      , t2 |> routeTo (updateMsg << LoadedB5 successMsg) (updateMsg << FailedToLoad5 failureMsg)
-      , t3 |> routeTo (updateMsg << LoadedC5 successMsg) (updateMsg << FailedToLoad5 failureMsg)
-      , t4 |> routeTo (updateMsg << LoadedD5 successMsg) (updateMsg << FailedToLoad5 failureMsg)
-      , t5 |> routeTo (updateMsg << LoadedE5 successMsg) (updateMsg << FailedToLoad5 failureMsg)
-      ]
-        |> Cmd.batch
-    )
+getInitialFunction : UpdateModel state model -> (state -> model)
+getInitialFunction updateModel =
+    case updateModel of
+        UpdateModel _ initialModel ->
+            initialModel
+        UpdateComplete update ->
+            update

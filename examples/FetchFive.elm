@@ -10,7 +10,7 @@ import Browser
 import Html exposing (Html, div, h1, h2, img, li, p, text, ul)
 import Html.Attributes exposing (src)
 import Http
-import Task.Parallel exposing (Msg5, State5, attempt5, mapState, Task5(..), update5)
+import Task.Parallel as Parallel
 import Time
 
 
@@ -24,20 +24,28 @@ main =
 
 
 type Model
-    = Loading (State5 Post (List Comment) Time.Posix Photo Todo)
+    = Loading (Parallel.State5 Model Msg Http.Error Post (List Comment) Time.Posix Photo Todo)
     | FailedToLoad String
     | PageReady Post (List Comment) Time.Posix Photo Todo
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    Task5 Api.fetchPost Api.fetchComments Time.now (Api.fetchPhotoById 1) Api.fetchTodo
-        |> attempt5 DownloadUpdated DownloadFinished DownloadFailed
-        |> mapState Loading -- Alias for Tuple.mapFirst
+    Parallel.attempt5
+        { task1 = Api.fetchPost
+        , task2 = Api.fetchComments
+        , task3 = Time.now
+        , task4 = Api.fetchPhotoById 1
+        , task5 = Api.fetchTodo
+        , onFailure = DownloadFailed
+        , onSuccess = Parallel.Success5 DownloadFinished
+        , onUpdates = DownloadUpdated
+        , toModel = Loading
+        }
 
 
 type Msg
-    = DownloadUpdated (Msg5 Msg Http.Error Post (List Comment) Time.Posix Photo Todo)
+    = DownloadUpdated (Parallel.Msg5 Http.Error Post (List Comment) Time.Posix Photo Todo)
     | DownloadFailed Http.Error
     | DownloadFinished Post (List Comment) Time.Posix Photo Todo
 
@@ -48,8 +56,7 @@ update msg model =
         Loading taskState ->
             case msg of
                 DownloadUpdated taskMsg ->
-                    update5 taskMsg taskState
-                        |> mapState Loading
+                    Parallel.update5 taskMsg taskState
 
                 DownloadFailed err ->
                     ( FailedToLoad <| Api.httpErrorString <| err, Cmd.none )

@@ -27,11 +27,21 @@ tasks of different result types (or a list of the same type). It will return a
 tuple with some internal state and a command.
 
 ```elm
+import Task.Parallel as Parallel
+
 init : () -> ( Model, Cmd Msg )
 init _ =
-    Task5 getUser getOptions getMaps getChat Time.now
-        |> attempt5 Updated AllFinished OneFailed
-        |> mapState Loading
+    Parallel.attempt5
+        { task1 = Api.getUser
+        , task2 = Api.getOptions
+        , task3 = Api.getMaps
+        , task4 = Api.getChat
+        , task5 = Time.now
+        , onFailure = OneFailed
+        , onSuccess = Parallel.OnSuccess5 AllFinished
+        , onUpdates = Updated
+        , toModel = Loading
+        }
 ```
 
 Store the state and pass along the command. Your model will need to store a
@@ -40,7 +50,7 @@ type matching the number of your tasks.
 
 ```elm
 type Model
-    = Loading (State5 User Options Maps Chat Posix)
+    = Loading (Parallel.State5 Model Msg Error User Options Maps Chat Posix)
     | Success User Options Maps Chat Posix
     | Failure Error
 ```
@@ -51,7 +61,7 @@ with a similar type annotation except including the Msg type of your module and 
 
 ```elm
 type Msg
-    = Updated (Msg5 Msg Error User Options Maps Chat Posix)
+    = Updated (Parallel.Msg5 Error User Options Maps Chat Posix)
     | AllFinished User Options Maps Chat Posix
     | OneFailed Error
 ```
@@ -65,8 +75,7 @@ and finally your update function will only need to handle three cases
 ```elm
 case msg of
     Updated taskMsg ->
-        update5 taskState taskMsg AllFinished OneFailed
-            |> mapState Loading
+        Parallel.update5 taskMsg taskState
 
     AllFinished user options maps chat time ->
         ( Success user options maps chat time, Cmd.none )

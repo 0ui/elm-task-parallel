@@ -7,7 +7,7 @@ import Api exposing (Post, Comment)
 import Browser
 import Html exposing (Html, div, text, h1, p, ul, li)
 import Http
-import Task.Parallel
+import Task.Parallel as Parallel
 
 main =
     Browser.element
@@ -17,69 +17,78 @@ main =
         , view = view
         }
 
-type Model
-    = Loading (Task.Parallel.ListState Post)
-    | FailedToLoad String
-    | PageReady (List Post)
+type Model =
+    Model { taskState : Parallel.StateList Model Msg Http.Error Post
+    , loadingErr : Maybe Http.Error
+    , result : Maybe (List Post)
+    }
 
+initialModel : Parallel.StateList Model Msg Http.Error Post -> Model
+initialModel taskState =
+    Model
+        { taskState = taskState
+        , loadingErr = Nothing
+        , result = Nothing
+        }
 
-init : () -> (Model, Cmd Msg)
+init : () -> ( Model, Cmd Msg )
 init _ =
-        [ Api.fetchPostById 1
-        , Api.fetchPostById 2
-        , Api.fetchPostById 42
-        , Api.fetchPostById 4
-        , Api.fetchPostById 5
-        , Api.fetchPostById 12
-        ]
-          |> Task.Parallel.attemptList DownloadUpdated DownloadFinished DownloadFailed
-          |> Task.Parallel.mapState Loading
+    Parallel.attemptList
+        { tasks =
+            [ Api.fetchPostById 1
+            , Api.fetchPostById 2
+            , Api.fetchPostById 4
+            , Api.fetchPostById 5
+            , Api.fetchPostById 12
+            ]
+        , onFailure = DownloadFailed
+        , onSuccess = Parallel.SuccessList DownloadFinished
+        , onUpdates =  DownloadUpdated 
+        , updateModel = Parallel.UpdateModel 
+            (\ state (Model model) -> Model { model | taskState = state })
+            initialModel
+        }
 
 
 type Msg
-    = DownloadUpdated (Task.Parallel.ListMsg Msg Http.Error Post)
+    = DownloadUpdated (Parallel.MsgList Http.Error Post)
     | DownloadFailed Http.Error
     | DownloadFinished (List Post)
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
-update msg model =
-    case model of
-        Loading downloadState ->
-            case msg of
-                DownloadUpdated downloadMsg ->
-                    Task.Parallel.updateList downloadState downloadMsg
-                        |> Task.Parallel.mapState Loading
+update msg ((Model model) as originalModel) =
+    case msg of
+        DownloadUpdated taskMsg ->
+            Parallel.updateList taskMsg model.taskState originalModel
 
-                DownloadFailed err ->
-                    ( FailedToLoad <| Api.httpErrorString <| err, Cmd.none )
+        DownloadFailed err ->
+            ( Model { model | loadingErr = Just err }, Cmd.none )
 
-                DownloadFinished posts ->
-                    ( PageReady posts, Cmd.none )
-        _ ->
-          ( model, Cmd.none )
+        DownloadFinished posts ->
+            ( Model { model | result = Just posts }, Cmd.none )
 
 view : Model -> Html Msg
-view model =
-  case model of
-    Loading _ ->
-      text "Loading data..."
+view (Model model) =
+    div []
+        [ p [] [ text (model.loadingErr |> Maybe.map Api.httpErrorString |> Maybe.withDefault "")]
+        , case model.result of
+            Nothing ->
+              p [] [ text "Loading data..." ]
 
-    FailedToLoad err ->
-      text <| "Failed to load: " ++ err
-
-    PageReady posts ->
-      div []
-        [ h1 [] [ text "Posts" ]
-        , ul []
-            (posts
-                |> List.map(\post ->
-                    li []
-                        [ p [] [ text post.title ]
-                        , p [] [ text post.body ]
-                        , p [] [ text <| String.fromInt <| post.id ]
-                        ]
-                )
-            )
+            Just posts ->
+              div []
+                [ h1 [] [ text "Posts" ]
+                , ul []
+                    (posts
+                        |> List.map(\post ->
+                            li []
+                                [ p [] [ text post.title ]
+                                , p [] [ text post.body ]
+                                , p [] [ text <| String.fromInt <| post.id ]
+                                ]
+                        )
+                    )
+                ]
         ]
 

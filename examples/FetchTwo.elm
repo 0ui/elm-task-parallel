@@ -6,7 +6,7 @@ import Api exposing (Comment, Post)
 import Browser
 import Html exposing (Html, div, h1, li, p, text, ul)
 import Http
-import Task.Parallel exposing (State2, Msg2, attempt2, mapState, Task2(..), update2)
+import Task.Parallel as Parallel
 
 
 main =
@@ -19,19 +19,24 @@ main =
 
 
 type Model
-    = Loading (State2 Post (List Comment))
+    = Loading (Parallel.State2 Model Msg Http.Error Post (List Comment))
     | FailedToLoad String
     | PageReady Post (List Comment)
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    Task2 Api.fetchPost Api.fetchComments
-        |> attempt2 DownloadUpdated DownloadFinished DownloadFailed
-        |> mapState Loading -- Alias for Tuple.mapFirst
+    Parallel.attempt2
+        { task1 = Api.fetchPost
+        , task2 = Api.fetchComments
+        , onFailure = DownloadFailed
+        , onSuccess = Parallel.Success2 DownloadFinished
+        , onUpdates = DownloadUpdated
+        , toModel = Loading
+        }
 
 type Msg
-    = DownloadUpdated (Msg2 Msg Http.Error Post (List Comment))
+    = DownloadUpdated (Parallel.Msg2 Http.Error Post (List Comment))
     | DownloadFailed Http.Error
     | DownloadFinished Post (List Comment)
 
@@ -39,11 +44,10 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
-        Loading task2 ->
+        Loading task ->
             case msg of
                 DownloadUpdated taskMsg ->
-                    update2 taskMsg task2
-                        |> mapState Loading
+                    Parallel.update2 taskMsg task
 
                 DownloadFailed err ->
                     ( FailedToLoad <| Api.httpErrorString <| err, Cmd.none )
