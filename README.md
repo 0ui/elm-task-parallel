@@ -88,6 +88,10 @@ case msg of
         ( PageLoaded user options locations chat time, Cmd.none )
 ```
 
+The usage of `Tuple.mapFirst` here is simply mapping the result
+`( Parallel.State5, Cmd Msg )` the library produces into a `( Model, Cmd Msg )`
+that your program is expecting.
+
 ## Caveats
 
 - If the tasks have different result types, you're limited to 9 tasks.
