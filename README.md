@@ -29,10 +29,6 @@ tuple with some internal state and a command.
 ```elm
 import Task.Parallel as Parallel
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    doTasks |> Tuple.mapFirst PageLoading
-
 doTasks : ( Parallel.State5 Msg User Options Locations Chat Time.Posix, Cmd Msg )
 doTasks =
     ( taskState, taskCmd ) =
