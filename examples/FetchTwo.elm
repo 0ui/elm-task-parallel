@@ -7,7 +7,7 @@ import Api exposing (Comment, Post)
 import Browser
 import Html exposing (Html, div, h1, li, p, text, ul)
 import Http
-import Task.Parallel
+import Task.Parallel as Parallel
 
 
 main =
@@ -20,7 +20,7 @@ main =
 
 
 type Model
-    = Loading (Task.Parallel.State2 Msg Post (List Comment))
+    = Loading (Parallel.State2 Msg Post (List Comment))
     | FailedToLoad String
     | PageReady Post (List Comment)
 
@@ -29,7 +29,7 @@ init : () -> ( Model, Cmd Msg )
 init _ =
     let
         ( loadingState, fetchCmd ) =
-            Task.Parallel.attempt2
+            Parallel.attempt2
                 { task1 = Api.fetchPost
                 , task2 = Api.fetchComments
                 , onUpdates = DownloadUpdated
@@ -41,7 +41,7 @@ init _ =
 
 
 type Msg
-    = DownloadUpdated (Task.Parallel.Msg2 Post (List Comment))
+    = DownloadUpdated (Parallel.Msg2 Post (List Comment))
     | DownloadFailed Http.Error
     | DownloadFinished Post (List Comment)
 
@@ -52,7 +52,7 @@ update msg model =
         Loading downloadState ->
             case msg of
                 DownloadUpdated downloadMsg ->
-                    Task.Parallel.update2 downloadState downloadMsg
+                    Parallel.update2 downloadState downloadMsg
                         |> Tuple.mapFirst Loading
 
                 DownloadFailed err ->
