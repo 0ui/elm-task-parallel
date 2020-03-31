@@ -672,7 +672,7 @@ type ListMsg a
 or when one fails. Similar to a `Task.sequence` except in parallel.
 
     type Msg
-        = DownloadUpdated (ListMsg String)
+        = DownloadUpdated (Task.Parallel.ListMsg String)
         | DownloadFailed Http.Error
         | DownloadCompleted (List String)
 
