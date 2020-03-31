@@ -31,17 +31,16 @@ import Task.Parallel as Parallel
 
 doTasks : ( Parallel.State5 Msg User Options Locations Chat Time.Posix, Cmd Msg )
 doTasks =
-    ( taskState, taskCmd ) =
-        Parallel.attempt5
-            { task1 = Api.fetchUser
-            , task2 = Api.fetchOptions
-            , task3 = Api.fetchLocations
-            , task4 = Api.fetchChat
-            , task5 = Time.now
-            , onUpdates = TaskUpdated
-            , onFailure = TaskFailed
-            , onSuccess = AllFinished
-            }
+    Parallel.attempt5
+        { task1 = Api.fetchUser
+        , task2 = Api.fetchOptions
+        , task3 = Api.fetchLocations
+        , task4 = Api.fetchChat
+        , task5 = Time.now
+        , onUpdates = TaskUpdated
+        , onFailure = TaskFailed
+        , onSuccess = AllFinished
+        }
 ```
 
 Store the state and pass along the command. Your model will need to store a
