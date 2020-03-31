@@ -14,9 +14,9 @@ rendered. In order to avoid running the tasks in sequence which is slower, you
 typically have to
 
 - Batch task commands together
-- Handle each task's success case
 - Handle each task's error case
-- Check if each one is finished every time an individual task finishes
+- Handle each task's success case
+- Check if every other task is finished every time an individual task finishes
 
 This library is designed to do that for you.
 
@@ -43,8 +43,8 @@ doTasks =
         }
 ```
 
-Store the state and pass along the command. Your model will need to store a
-`Parallel.State[n]` matching the number of your tasks and reference your `Msg`
+Store the state and pass the command to Elm. Your model will need to keep a
+`Parallel.State[n]` matching the number of your tasks. It will reference your `Msg`
 type as well as the types of your tasks.
 
 ```elm
@@ -54,7 +54,7 @@ type Model
     | PageLoaded User Options Locations Chat Time.Posix
 ```
 The message you passed in to the helper function will need to accept an internal
-`Parallel.Msg[n]` referencing only the types of the tasks.
+`Parallel.Msg[n]` referencing the types of the tasks.
 
 ```elm
 type Msg
@@ -64,9 +64,9 @@ type Msg
 ```
 
 and finally your update function will only need to handle three cases
-- Internal updates. Just call `Parallel.update[n]`, store the state, and pass
-  the command along.
-- The error case of one task failing.
+- Internal updates. Just call `Parallel.update[n]` which gives you the same
+  type of data as the initial `Parallel.attempt[n]`
+- The error case where one task has failed.
 - The success case where all of the tasks have successfully completed.
 
 
@@ -82,10 +82,6 @@ case msg of
     AllFinished user options locations chat time ->
         ( PageLoaded user options locations chat time, Cmd.none )
 ```
-
-The usage of `Tuple.mapFirst` here is simply mapping the result
-`( Parallel.State5, Cmd Msg )` the library produces into a `( Model, Cmd Msg )`
-that your program is expecting.
 
 ## Caveats
 
